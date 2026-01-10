@@ -1,0 +1,7 @@
+opencv-python>=4.8.0
+pillow>=10.0.0
+speechrecognition>=3.10.0
+pyaudio>=0.2.11
+requests>=2.31.0
+elevenlabs>=0.2.27
+pygame>=2.0.0

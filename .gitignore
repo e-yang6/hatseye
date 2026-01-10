@@ -1,0 +1,78 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Configuration files with sensitive data
+config.py
+*.key
+*.env
+.env
+.env.local
+.env.*.local
+config.local.py
+config_*.py
+*_config.py
+secrets.py
+secrets.json
+.secrets
+credentials.json
+credentials.yaml
+*.pem
+*.cert
+*.crt
+*.p12
+*.pfx
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+*.temp
+*.cache
+
+# Audio/temporary files created during runtime
+*.mp3
+*.wav
+*.ogg
+*.m4a
+temp/
+tmp/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+.eggs/
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
