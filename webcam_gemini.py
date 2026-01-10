@@ -154,9 +154,14 @@ def image_to_base64(image):
 
 # Cache model list to avoid repeated API calls
 _cached_model = None
+_cached_available_models = None  # Cache the list of available models globally
 
 def analyze_image_with_gemini(image, user_prompt):
-    """Send image to Gemini API for analysis - optimized for speed with proper error handling"""
+    """
+    Send image to Gemini API for analysis - optimized for speed with proper error handling.
+    Each call is completely independent - no conversation history is maintained.
+    Every request starts fresh with no context from previous interactions.
+    """
     global _cached_model
     
     # List of FREE-TIER models - try Flash first, then fallback to other free models
@@ -175,8 +180,18 @@ def analyze_image_with_gemini(image, user_prompt):
     ]
     
     # Try to get available models, but use known free-tier models as base
+    # Use cached model list if available to avoid repeated API calls
+    global _cached_available_models
     try:
-        available_models, _ = list_available_models()
+        if _cached_available_models is None:
+            # Only try once - if it fails, cache empty list to avoid repeated failed calls
+            try:
+                _cached_available_models, _ = list_available_models()
+                if not _cached_available_models:
+                    _cached_available_models = []  # Cache empty list to prevent retries
+            except:
+                _cached_available_models = []  # Cache empty list on error to prevent retries
+        available_models = _cached_available_models if _cached_available_models else []
         if available_models:
             # Filter to only free-tier models (exclude exp, 2.0, 2.5, preview which require billing)
             free_tier_models = [
@@ -252,8 +267,12 @@ def analyze_image_with_gemini(image, user_prompt):
             try:
                 url = f"https://generativelanguage.googleapis.com/{api_version}/models/{model_name}:generateContent?key={GEMINI_API_KEY}"
                 
+                # IMPORTANT: Each request is completely independent - no conversation history.
+                # The contents array contains ONLY the current message (no previous messages).
+                # This ensures each new prompt starts fresh with no context from past interactions.
                 payload = {
                     "contents": [{
+                        "role": "user",  # Explicitly mark as user message (single-turn conversation)
                         "parts": [
                             {"text": analysis_prompt},
                             {
@@ -414,6 +433,29 @@ def is_error_message(text):
             "wait for quota" in text_lower or
             "google cloud" in text_lower)
 
+def play_sound_file(filepath):
+    """Play an MP3 sound file using pygame (if available)"""
+    if play_audio_func != "pygame":
+        return False  # Only pygame supports file playback in this codebase
+    
+    if not os.path.exists(filepath):
+        return False  # File doesn't exist, silently skip
+    
+    try:
+        # pygame is already imported and mixer initialized if play_audio_func == "pygame"
+        import pygame
+        if not pygame.mixer.get_init():
+            pygame.mixer.init()
+        pygame.mixer.music.load(filepath)
+        pygame.mixer.music.play()
+        # Wait for playback to finish (non-blocking check)
+        while pygame.mixer.music.get_busy():
+            time.sleep(0.05)
+        return True
+    except Exception:
+        # Silently fail - don't interrupt the application if sound can't play
+        return False
+
 def text_to_speech(text):
     """Convert text to speech using ElevenLabs and play it - optimized for speed"""
     if not ELEVENLABS_AVAILABLE or elevenlabs_client is None:
@@ -425,7 +467,7 @@ def text_to_speech(text):
     
     try:
         # Use default voice ID directly (no lookup for speed)
-        voice_id = "21m00Tcm4TlvDq8ikWAM"  # Rachel voice
+        voice_id = "EXAVITQu4vr4xnSDxMaL"  # Bella voice - clear, natural female voice good for accessibility
         
         # Generate audio with fastest settings
         audio_generator = elevenlabs_client.text_to_speech.convert(
@@ -533,6 +575,9 @@ def detect_wake_word(recognizer, microphone):
                 for phrase in wake_phrases:
                     if phrase in text:
                         print("Wake word detected!\n")
+                        # Play wake word sound if available
+                        wake_sound_path = os.path.join("public", "wake_word_sound.mp3")
+                        play_sound_file(wake_sound_path)
                         return True
                 
                 # VERY LENIENT matching: look for any hat/eye-like keywords anywhere
@@ -543,6 +588,9 @@ def detect_wake_word(recognizer, microphone):
                 # ULTRA LENIENT: If both keywords are present anywhere, accept it
                 if has_hat and has_eye:
                     print("Wake word detected!\n")
+                    # Play wake word sound if available
+                    wake_sound_path = os.path.join("public", "wake_word_sound.mp3")
+                    play_sound_file(wake_sound_path)
                     return True
                 
                 # EXTRA LENIENT: If we have either keyword in a short phrase (3 words or less)
@@ -554,16 +602,25 @@ def detect_wake_word(recognizer, microphone):
                         second_is_eye = any(kw in second_word for kw in wake_keywords['eye'])
                         if first_is_hat and second_is_eye:
                             print("Wake word detected!\n")
+                            # Play wake word sound if available
+                            wake_sound_path = os.path.join("public", "wake_word_sound.mp3")
+                            play_sound_file(wake_sound_path)
                             return True
                 
                 # VERY LENIENT: If text contains "hey" + any hat/eye keyword
                 if 'hey' in text.lower() and (has_hat or has_eye):
                     print("Wake word detected!\n")
+                    # Play wake word sound if available
+                    wake_sound_path = os.path.join("public", "wake_word_sound.mp3")
+                    play_sound_file(wake_sound_path)
                     return True
                 
                 # FINAL FALLBACK: If the phrase is 2-3 words and contains hat/eye keywords
                 if 2 <= len(words) <= 3 and (has_hat or has_eye):
                     print("Wake word detected!\n")
+                    # Play wake word sound if available
+                    wake_sound_path = os.path.join("public", "wake_word_sound.mp3")
+                    play_sound_file(wake_sound_path)
                     return True
                 
             except Exception as e:
@@ -581,11 +638,12 @@ def detect_wake_word(recognizer, microphone):
 
 def main():
     """Main voice-centered interactive loop"""
-    # Test API key by listing models
+    # Test API key by listing models ONCE and cache it
+    global _cached_available_models
     print("Testing Gemini API connection...")
-    available_models, _ = list_available_models()
-    if available_models:
-        print(f"✓ Connected! Found {len(available_models)} available model(s)")
+    _cached_available_models, _ = list_available_models()
+    if _cached_available_models:
+        print(f"✓ Connected! Found {len(_cached_available_models)} available model(s)")
     else:
         print("⚠ Warning: Could not connect to Gemini API. Continuing anyway...")
     
@@ -637,15 +695,14 @@ def main():
     recognizer = sr.Recognizer()
     microphone = sr.Microphone()
     
-    # Test and list available models at startup
+    # Use cached model list from startup (don't call API again)
     print("=" * 60)
     print("🎩 Hat's Eye - Voice Vision Analyzer")
     print("=" * 60)
     print("\nChecking available models...")
-    available_models, model_details = list_available_models()
-    if available_models:
-        print(f"Found {len(available_models)} available model(s)")
-        vision_models = [m for m in available_models if 'pro' in m.lower() or 'vision' in m.lower() or 'flash' in m.lower() or '1.5' in m or '2.0' in m or '2.5' in m]
+    if _cached_available_models:
+        print(f"Found {len(_cached_available_models)} available model(s)")
+        vision_models = [m for m in _cached_available_models if 'pro' in m.lower() or 'vision' in m.lower() or 'flash' in m.lower() or '1.5' in m or '2.0' in m or '2.5' in m]
         if vision_models:
             print(f"Vision-capable models: {', '.join(vision_models[:5])}")
         else:
@@ -725,6 +782,10 @@ def main():
             if question in ['quit', 'exit', 'stop', 'goodbye']:
                 print("\n👋 Goodbye!")
                 break
+            
+            # Play question received sound if available
+            question_sound_path = os.path.join("public", "question_received_sound.mp3")
+            play_sound_file(question_sound_path)
             
             # Capture webcam frame - only once
             image = capture_webcam_frame()

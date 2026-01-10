@@ -10,6 +10,11 @@ ENV/
 env.bak/
 venv.bak/
 
+# Flask
+instance/
+.webassets-cache
+*.flask_session
+
 # Configuration files with sensitive data
 config.py
 *.key
@@ -53,6 +58,11 @@ Thumbs.db
 *.m4a
 temp/
 tmp/
+
+# But keep public folder structure and README files
+!public/
+!public/**/*.txt
+!public/**/*.md
 
 # Database files
 *.db

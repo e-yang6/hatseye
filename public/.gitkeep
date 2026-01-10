@@ -1,0 +1,2 @@
+# This file ensures the public folder is tracked by git
+# Sound files (MP3) in this folder will be ignored by .gitignore but the folder structure is preserved
