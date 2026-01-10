@@ -235,15 +235,9 @@ def analyze_image_with_gemini(image, user_prompt):
         start_index = models_to_try.index(_cached_model)
         models_to_try = [models_to_try[start_index]] + [m for m in models_to_try if m != models_to_try[start_index]]
     
-    # Detect question type and prepare minimal prompt (shorter = faster)
-    user_lower = user_prompt.lower()
-    
-    if any(word in user_lower for word in ['read', 'text', 'what does it say', 'what text', 'what\'s written']):
-        analysis_prompt = "Read the text in this image. Reply in one conversational sentence like 'It says [text]' or 'I don't see any text'."
-    elif any(word in user_lower for word in ['holding', 'what am i', 'what do i have', 'what\'s in my hand', 'what is this']):
-        analysis_prompt = "What is the person holding? Reply in one sentence like 'You're holding a [object]' or 'Nothing'."
-    else:
-        analysis_prompt = "What is the person holding? Reply in one sentence like 'You're holding a [object]' or 'Nothing'."
+    # Master prompt for visually impaired assistance
+    # Optimized for clarity and conciseness
+    analysis_prompt = f"You are helping a visually impaired person identify visual objects. Answer their question about what they can see in this image with one clear, simple sentence. Be direct and helpful. Question: {user_prompt}"
 
     # Optimize image - smaller and faster encoding
     max_size = (512, 512)
@@ -267,28 +261,37 @@ def analyze_image_with_gemini(image, user_prompt):
             try:
                 url = f"https://generativelanguage.googleapis.com/{api_version}/models/{model_name}:generateContent?key={GEMINI_API_KEY}"
                 
-                # IMPORTANT: Each request is completely independent - no conversation history.
-                # The contents array contains ONLY the current message (no previous messages).
-                # This ensures each new prompt starts fresh with no context from past interactions.
+                # CRITICAL: Each request is completely independent - NO conversation history is maintained.
+                # The contents array contains ONLY the current message (never previous messages).
+                # This ensures each new prompt starts fresh with zero context from past interactions.
+                # Each call creates a brand new payload dictionary - no state persists between calls.
                 payload = {
-                    "contents": [{
-                        "role": "user",  # Explicitly mark as user message (single-turn conversation)
-                        "parts": [
-                            {"text": analysis_prompt},
-                            {
-                                "inline_data": {
-                                    "mime_type": "image/jpeg",
-                                    "data": image_base64
+                    "contents": [
+                        {
+                            "role": "user",  # Single-turn conversation - no history
+                            "parts": [
+                                {"text": analysis_prompt},
+                                {
+                                    "inline_data": {
+                                        "mime_type": "image/jpeg",
+                                        "data": image_base64
+                                    }
                                 }
-                            }
-                        ]
-                    }],
+                            ]
+                        }
+                        # NOTE: Only ONE message in contents array - no assistant responses, no history from previous calls
+                    ],
                     "generationConfig": {
-                        "temperature": 0.2,
-                        "maxOutputTokens": 30,
-                        "topP": 0.7,
+                        "temperature": 0.3,
+                        "maxOutputTokens": 50,  # Increased to allow complete sentence
+                        "topP": 0.8,
                     }
                 }
+                
+                # Safety check: Verify we're not accidentally including history
+                # (This is a safeguard - the structure above already ensures no history)
+                if len(payload["contents"]) != 1:
+                    raise ValueError("Payload must contain exactly one message - conversation history not allowed")
                 
                 headers = {"Content-Type": "application/json"}
                 response = requests.post(url, json=payload, headers=headers, timeout=15)
@@ -324,12 +327,13 @@ def analyze_image_with_gemini(image, user_prompt):
                                     # SUCCESS - cache the working model and return immediately
                                     _cached_model = model_name
                                     
-                                    # Take first sentence only for speed
-                                    sentences = result_text.split('. ')
-                                    first_sentence = sentences[0].strip()
-                                    if not first_sentence.endswith(('.', '!', '?')):
-                                        first_sentence += '.'
-                                    return first_sentence
+                                    # Return the response (should be one simple sentence as requested)
+                                    # Clean up any extra whitespace
+                                    result_text = result_text.strip()
+                                    # Ensure it ends with punctuation if it doesn't already
+                                    if result_text and not result_text.endswith(('.', '!', '?')):
+                                        result_text += '.'
+                                    return result_text
                                 else:
                                     last_error = f"Model {model_name} returned no text"
                                     break  # Try next API version
