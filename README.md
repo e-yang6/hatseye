@@ -121,7 +121,8 @@ Team
 
 | Member |
 |---------|
-| (Add team member names here) |
+| Ryan Gao |
+| Ethan Yang |
 
 ---
 
