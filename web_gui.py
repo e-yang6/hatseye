@@ -30,6 +30,73 @@ from config import CAMERA_INDEX
 
 app = Flask(__name__)
 
+# Generate favicon from uploaded source image on startup
+def generate_favicon():
+    """Generate favicon from favicon_source.png (user uploads this file) or invert existing favicon.png"""
+    try:
+        source_path = os.path.join('static', 'favicon_source.png')
+        favicon_path = os.path.join('static', 'favicon.png')
+        
+        # If favicon_source.png exists, process it to create favicon.png
+        if os.path.exists(source_path):
+            # Open the source image
+            img = Image.open(source_path)
+            
+            # Convert to RGBA if not already (preserve transparency)
+            if img.mode != 'RGBA':
+                img = img.convert('RGBA')
+            
+            # Split into channels
+            r, g, b, a = img.split()
+            
+            # Invert only RGB channels, keep alpha channel
+            from PIL import ImageOps
+            r_inv = ImageOps.invert(r)
+            g_inv = ImageOps.invert(g)
+            b_inv = ImageOps.invert(b)
+            
+            # Merge channels back together (keep original alpha)
+            inverted_img = Image.merge('RGBA', (r_inv, g_inv, b_inv, a))
+            
+            # Resize to common favicon size (32x32 is good for modern browsers)
+            favicon_size = (32, 32)
+            inverted_img = inverted_img.resize(favicon_size, Image.Resampling.LANCZOS)
+            
+            # Save as favicon
+            inverted_img.save(favicon_path, 'PNG')
+            print(f"Generated favicon from {source_path}")
+        elif os.path.exists(favicon_path):
+            # If favicon.png already exists, invert it to make it white (preserve transparency)
+            img = Image.open(favicon_path)
+            
+            # Convert to RGBA if not already (preserve transparency)
+            if img.mode != 'RGBA':
+                img = img.convert('RGBA')
+            
+            # Split into channels
+            r, g, b, a = img.split()
+            
+            # Invert only RGB channels, keep alpha channel
+            from PIL import ImageOps
+            r_inv = ImageOps.invert(r)
+            g_inv = ImageOps.invert(g)
+            b_inv = ImageOps.invert(b)
+            
+            # Merge channels back together (keep original alpha)
+            inverted_img = Image.merge('RGBA', (r_inv, g_inv, b_inv, a))
+            
+            # Save back as favicon
+            inverted_img.save(favicon_path, 'PNG')
+            print(f"Inverted favicon at {favicon_path} (preserving transparency)")
+        else:
+            # No favicon source or favicon found
+            print(f"Note: No favicon_source.png found. Upload favicon_source.png to static/ folder to generate favicon")
+    except Exception as e:
+        print(f"Could not generate favicon: {e}")
+
+# Generate favicon on startup
+generate_favicon()
+
 # Global variables for webcam
 camera = None
 camera_lock = threading.Lock()

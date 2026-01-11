@@ -1,17 +1,25 @@
-Logo File Location
+Static Files Directory
+======================
 
-Place your logo file here as: logo.png
+This directory contains static files served by the Flask application.
 
-Supported formats:
-- PNG (recommended - supports transparency)
-- JPG/JPEG
-- SVG (if supported by browser)
+Files:
+------
 
-Recommended size:
-- Width: 200px or less
-- Height: 80px or less
-- Aspect ratio: Flexible
+- logo.png          : The HATSEYE logo displayed on the web interface
+                      (Upload your logo image here)
 
-The logo will be displayed at the top center of the page, above the webcam feed.
+- favicon_source.png: Source image for the favicon (optional)
+                      Upload this file and the system will automatically:
+                      - Invert the colors
+                      - Resize to 32x32 pixels
+                      - Generate favicon.png
 
-If no logo file is found, the logo space will be hidden automatically.
+- favicon.png       : The browser tab icon (generated automatically from 
+                      favicon_source.png, or upload directly if preferred)
+
+Instructions:
+-------------
+1. Upload your logo.png file to this directory
+2. (Optional) Upload favicon_source.png to generate an inverted favicon
+   OR upload favicon.png directly if you prefer
