@@ -26,7 +26,23 @@ from webcam_gemini import (
     ELEVENLABS_AVAILABLE,
     _cached_available_models
 )
-from config import CAMERA_INDEX
+from config import CAMERA_INDEX, ARDUINO_PORT, ARDUINO_BAUDRATE
+
+# Import Arduino serial communication (optional)
+try:
+    from arduino_serial import (
+        connect_arduino,
+        disconnect_arduino,
+        read_arduino_data,
+        send_to_arduino,
+        get_latest_data,
+        is_connected as arduino_is_connected,
+        arduino_read_loop
+    )
+    ARDUINO_AVAILABLE = True
+except ImportError:
+    print("Arduino serial module not available. Install pyserial: pip install pyserial")
+    ARDUINO_AVAILABLE = False
 
 app = Flask(__name__)
 
@@ -291,11 +307,60 @@ def tts():
 @app.route('/status', methods=['GET'])
 def status():
     """Get system status"""
-    return jsonify({
+    status_data = {
         'elevenlabs_available': ELEVENLABS_AVAILABLE,
         'camera_available': get_camera() is not None,
         'current_camera_index': CAMERA_INDEX
-    })
+    }
+    
+    # Add Arduino status if available
+    if ARDUINO_AVAILABLE:
+        status_data['arduino_available'] = True
+        status_data['arduino_connected'] = arduino_is_connected()
+    else:
+        status_data['arduino_available'] = False
+    
+    return jsonify(status_data)
+
+@app.route('/arduino/data', methods=['GET'])
+def arduino_data():
+    """Get latest Arduino data"""
+    if not ARDUINO_AVAILABLE:
+        return jsonify({'error': 'Arduino module not available'}), 503
+    
+    if not arduino_is_connected():
+        return jsonify({'error': 'Arduino not connected'}), 503
+    
+    # Try to read fresh data first
+    from arduino_serial import read_arduino_data
+    read_arduino_data()  # Try to read fresh data
+    
+    data = get_latest_data()
+    if data is None:
+        return jsonify({'error': 'No data available'}), 404
+    
+    return jsonify(data)
+
+@app.route('/arduino/send', methods=['POST'])
+def arduino_send():
+    """Send command to Arduino"""
+    if not ARDUINO_AVAILABLE:
+        return jsonify({'error': 'Arduino module not available'}), 503
+    
+    if not arduino_is_connected():
+        return jsonify({'error': 'Arduino not connected'}), 503
+    
+    data = request.get_json()
+    command = data.get('command', '')
+    
+    if not command:
+        return jsonify({'error': 'No command provided'}), 400
+    
+    success = send_to_arduino(command)
+    if success:
+        return jsonify({'status': 'sent', 'command': command})
+    else:
+        return jsonify({'error': 'Failed to send command'}), 500
 
 @app.route('/cameras', methods=['GET'])
 def list_cameras():
@@ -412,10 +477,25 @@ if __name__ == '__main__':
         else:
             print("⚠ ElevenLabs not available - responses will be text only")
         
+        # Connect to Arduino if available
+        if ARDUINO_AVAILABLE:
+            print("\nConnecting to Arduino...")
+            if connect_arduino(ARDUINO_PORT, ARDUINO_BAUDRATE):
+                print("✓ Arduino connected")
+                # Start background thread to read Arduino data
+                arduino_thread = threading.Thread(target=arduino_read_loop, daemon=True)
+                arduino_thread.start()
+            else:
+                print("⚠ Arduino not connected (check connection and port)")
+        else:
+            print("⚠ Arduino support not available (install pyserial: pip install pyserial)")
+        
         print("\n" + "=" * 60)
         
         app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
     except KeyboardInterrupt:
         print("\n\n👋 Shutting down...")
         release_camera()
+        if ARDUINO_AVAILABLE:
+            disconnect_arduino()
         print("Goodbye!")
