@@ -466,26 +466,56 @@ def is_error_message(text):
             "google cloud" in text_lower)
 
 def play_sound_file(filepath):
-    """Play an MP3 sound file using pygame (if available)"""
-    if play_audio_func != "pygame":
-        return False  # Only pygame supports file playback in this codebase
-    
+    """Play an MP3 sound file using the best available method for the platform"""
     if not os.path.exists(filepath):
+        print(f"Sound file not found: {filepath}")
         return False  # File doesn't exist, silently skip
     
+    import subprocess
+    import platform
+    
     try:
-        # pygame is already imported and mixer initialized if play_audio_func == "pygame"
-        import pygame
-        if not pygame.mixer.get_init():
-            pygame.mixer.init()
-        pygame.mixer.music.load(filepath)
-        pygame.mixer.music.play()
-        # Wait for playback to finish (non-blocking check)
-        while pygame.mixer.music.get_busy():
-            time.sleep(0.05)
-        return True
-    except Exception:
-        # Silently fail - don't interrupt the application if sound can't play
+        system = platform.system()
+        
+        if system == "Darwin":  # macOS
+            # Use afplay - built-in macOS audio player, no dependencies needed
+            # Run in background so it doesn't block
+            subprocess.Popen(['afplay', filepath], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            print(f"✓ Playing sound: {os.path.basename(filepath)} (macOS afplay)")
+            return True
+            
+        elif system == "Windows":
+            # Try pygame first (if available)
+            if play_audio_func == "pygame":
+                import pygame
+                if not pygame.mixer.get_init():
+                    pygame.mixer.init()
+                pygame.mixer.music.load(filepath)
+                pygame.mixer.music.play()
+                print(f"✓ Playing sound: {os.path.basename(filepath)} (pygame)")
+                return True
+            else:
+                # Fallback to Windows Media Player
+                subprocess.Popen(['powershell', '-c', f'(New-Object Media.SoundPlayer "{filepath}").PlaySync()'], 
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                print(f"✓ Playing sound: {os.path.basename(filepath)} (Windows Media Player)")
+                return True
+                
+        else:  # Linux
+            # Try common Linux audio players
+            for player in ['aplay', 'paplay', 'ffplay']:
+                try:
+                    subprocess.Popen([player, filepath], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    print(f"✓ Playing sound: {os.path.basename(filepath)} ({player})")
+                    return True
+                except FileNotFoundError:
+                    continue
+            
+            print(f"⚠️ No audio player found on Linux")
+            return False
+            
+    except Exception as e:
+        print(f"Error playing sound {filepath}: {e}")
         return False
 
 def text_to_speech(text):

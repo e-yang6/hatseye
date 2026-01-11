@@ -1,11 +1,7 @@
 #!/usr/bin/env python3
 """
 Web GUI for HATSEYE - Full functionality in browser
-Run this file to start a web serv# Global state for Roboflow detection
-roboflow_detector = None
-roboflow_active = False
-roboflow_frame_counter = 0
-roboflow_last_predictions = None  # Cache last predictions to avoid flashingthen open http://localhost:5000 in your browser
+Run this file to start a web server, then open http://localhost:8080 in your browser
 """
 
 from flask import Flask, render_template, Response, request, jsonify, send_file
@@ -58,6 +54,17 @@ except ImportError as e:
     print(f"⚠ Roboflow not available: {e}")
 
 app = Flask(__name__)
+
+# Global state for Roboflow detection
+roboflow_detector = None
+roboflow_active = False
+roboflow_frame_counter = 0
+roboflow_last_predictions = None  # Cache last predictions to avoid flashing
+
+# Hazard detection state
+hazard_detected_time = None  # Timestamp when hazard was first detected
+hazard_sound_played = False  # Flag to prevent repeated sound playback
+HAZARD_THRESHOLD = 0.25  # Seconds - minimum time hazard must be visible before alert
 
 # Generate favicon from uploaded source image on startup
 def generate_favicon():
@@ -177,6 +184,46 @@ def release_camera():
         camera.release()
         camera = None
 
+def check_and_play_hazard_sound(hazard_detected):
+    """
+    Check if a hazard has been continuously detected and play alert sound.
+    
+    Args:
+        hazard_detected (bool): True if a hazard is currently detected in the frame
+    """
+    global hazard_detected_time, hazard_sound_played
+    
+    if hazard_detected:
+        # Hazard is currently detected
+        if hazard_detected_time is None:
+            # First detection - record the time
+            hazard_detected_time = time.time()
+            hazard_sound_played = False
+        else:
+            # Check how long the hazard has been detected
+            elapsed_time = time.time() - hazard_detected_time
+            
+            if elapsed_time >= HAZARD_THRESHOLD and not hazard_sound_played:
+                # Hazard has persisted for more than threshold - play alert sound
+                hazard_sound_file = os.path.join('public', 'Hazard.mp3')
+                
+                if os.path.exists(hazard_sound_file):
+                    try:
+                        print(f"⚠️ HAZARD ALERT: Playing hazard sound (detected for {elapsed_time:.2f}s)")
+                        # Play sound in background thread to not block video stream
+                        threading.Thread(target=play_sound_file, args=(hazard_sound_file,), daemon=True).start()
+                        hazard_sound_played = True
+                    except Exception as e:
+                        print(f"Error playing hazard sound: {e}")
+                else:
+                    print(f"⚠️ HAZARD ALERT: Hazard.mp3 not found at {hazard_sound_file}")
+                    # Mark as played to avoid spamming console
+                    hazard_sound_played = True
+    else:
+        # No hazard detected - reset state
+        hazard_detected_time = None
+        hazard_sound_played = False
+
 def generate_frames():
     """Generate video frames from webcam with optional Roboflow detection"""
     global roboflow_frame_counter, roboflow_last_predictions
@@ -220,10 +267,15 @@ def generate_frames():
                         if num_objects > 0:
                             classes = [p.get('class', 'unknown') for p in predictions['predictions']]
                             print(f"✓ Detected {num_objects} objects: {', '.join(classes)}")
+                            
+                            # Check for hazard detection and play sound
+                            check_and_play_hazard_sound(num_objects > 0)
                         else:
                             print(f"No objects detected")
+                            check_and_play_hazard_sound(False)
                     else:
                         roboflow_last_predictions = None
+                        check_and_play_hazard_sound(False)
                 except Exception as e:
                     print(f"Roboflow error: {e}")
                     import traceback
@@ -232,6 +284,10 @@ def generate_frames():
                 # Use cached predictions for smooth display (no flashing)
                 if roboflow_last_predictions:
                     frame = roboflow_detector.draw_predictions(frame.copy(), roboflow_last_predictions)
+                    # Check hazard state even when using cached predictions
+                    has_predictions = roboflow_last_predictions and 'predictions' in roboflow_last_predictions
+                    has_hazards = has_predictions and len(roboflow_last_predictions['predictions']) > 0
+                    check_and_play_hazard_sound(has_hazards)
         
         # Encode frame as JPEG
         ret, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
