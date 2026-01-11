@@ -434,7 +434,8 @@ def arduino_data():
     
     data = get_latest_data()
     if data is None:
-        return jsonify({'error': 'No data available'}), 404
+        # No data available - return 503 instead of 404 so frontend hides the display
+        return jsonify({'error': 'No data available'}), 503
     
     return jsonify(data)
 

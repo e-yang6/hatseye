@@ -195,7 +195,7 @@
 <body>
     <!-- Invisible activation overlay - click anywhere to activate -->
     <div class="activation-overlay" id="activation-overlay" title="Click anywhere to activate"></div>
-    
+
     <!-- Logo container - top center -->
     <div class="logo-container">
         <img id="logo" src="{{ url_for('static', filename='logo.png') }}" alt="HATSEYE Logo" onerror="this.style.display='none'; this.parentElement.style.display='none';">
@@ -232,7 +232,7 @@
         let wakeWordDetected = false;
         let audioContext = null;
         let audioEnabled = false;  // Track if user has interacted with page
-        
+
         // Browser detection
         const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
         const isEdge = /Edg/.test(navigator.userAgent);
@@ -253,7 +253,7 @@
             'hat seye', 'hats ai', 'hats aye', 'hats sauce',
             'hot eye', 'hot i', 'heart eye', 'hard eye'
         ];
-        
+
         const wakeKeywords = {
             hats: ['hats', 'hat', 'hot', 'hut', 'hart', 'heart', 'hard'],
             eye: ['eye', 'i', 'ai', 'aye', 'sauce', 'saws', 'saw', 'so', 'sigh', 'sighs']
@@ -275,11 +275,11 @@
 
                 recognition.onresult = function(event) {
                     const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase().trim();
-                    
+
                     // Check for wake word (EXTREMELY lenient)
                     if (!wakeWordDetected) {
                         let detected = false;
-                        
+
                         // Check for exact phrase matches first
                         for (const phrase of wakePhrases) {
                             if (transcript.includes(phrase)) {
@@ -287,32 +287,32 @@
                                 break;
                             }
                         }
-                        
+
                         // If not detected, check for keyword combinations
                         if (!detected) {
                             const words = transcript.split(/\s+/);
-                            
+
                             // Require at least 2 words
                             if (words.length < 2) {
                                 return;
                             }
-                            
+
                             // Check for keywords in actual words (not substrings)
                             const hasHat = words.some(word => wakeKeywords.hats.some(kw => word.toLowerCase().includes(kw)));
                             const hasEye = words.some(word => wakeKeywords.eye.some(kw => word.toLowerCase().includes(kw)));
-                            
+
                             // Require BOTH keywords in 2-3 word phrase
                             if (words.length >= 2 && words.length <= 3 && hasHat && hasEye) {
                                 detected = true;
                             }
-                            
+
                             // Or if "hey"/"hi" + both keywords in 2-4 word phrase
                             const hasHey = transcript.includes('hey') || transcript.includes('hi');
                             if (!detected && hasHey && words.length <= 4 && hasHat && hasEye) {
                                 detected = true;
                             }
                         }
-                        
+
                         if (detected) {
                             wakeWordDetected = true;
                             console.log('Wake word detected:', transcript);
@@ -325,10 +325,10 @@
                         console.log('Question received:', transcript);
                         // Play question received sound immediately
                         playSound('question_received_sound.mp3');
-                        
+
                         // Stop listening temporarily
                         recognition.stop();
-                        
+
                         // Analyze image after a brief delay to let sound play
                         setTimeout(() => {
                             analyzeImage(transcript);
@@ -349,7 +349,7 @@
                 recognition.onend = function() {
                     isListening = false;
                     console.log('Listening stopped');
-                    
+
                     // Restart if we should be listening
                     if (!wakeWordDetected) {
                         setTimeout(() => {
@@ -369,7 +369,7 @@
                     .then(function(stream) {
                         // Microphone access granted, start recognition
                         stream.getTracks().forEach(track => track.stop()); // Stop the stream, we only needed permission
-                        
+
                         try {
                             recognition.start();
                             console.log('Speech recognition started');
@@ -406,7 +406,7 @@
                 });
 
                 const data = await response.json();
-                
+
                 if (data.error) {
                     console.error('Analysis error:', data.error);
                     return;
@@ -435,7 +435,7 @@
 
             } catch (error) {
                 console.error('Analysis error:', error);
-                
+
                 // Restart listening
                 setTimeout(() => {
                     if (recognition && !isListening) {
@@ -466,30 +466,30 @@
                 if (response.ok) {
                     const audioBlob = await response.blob();
                     console.log('TTS audio blob received, size:', audioBlob.size, 'bytes');
-                    
+
                     if (audioBlob.size === 0) {
                         console.error('TTS returned empty audio blob');
                         return;
                     }
-                    
+
                     const audioUrl = URL.createObjectURL(audioBlob);
                     const audio = new Audio(audioUrl);
-                    
+
                     audio.oncanplaythrough = function() {
                         console.log('TTS audio ready to play');
                     };
-                    
+
                     audio.onended = () => {
                         console.log('TTS audio finished');
                         URL.revokeObjectURL(audioUrl);
                     };
-                    
+
                     audio.onerror = (e) => {
                         console.error('TTS audio playback error:', e);
                         console.error('Audio error details:', audio.error);
                         URL.revokeObjectURL(audioUrl);
                     };
-                    
+
                     try {
                         await audio.play();
                         console.log('TTS audio playing');
@@ -509,7 +509,7 @@
         function enableAudio() {
             audioEnabled = true;
             console.log('Audio enabled - sounds can now play');
-            
+
             // Preload and play a silent sound to unlock audio context
             const silentAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==');
             silentAudio.play().catch(e => {
@@ -523,22 +523,22 @@
                 console.warn('Audio not enabled yet - sound will not play:', filename);
                 return;
             }
-            
+
             console.log('Playing sound:', filename);
             const audio = new Audio('/sound/' + filename);
-            
+
             // Preload
             audio.preload = 'auto';
-            
+
             audio.oncanplaythrough = function() {
                 console.log('Sound ready to play:', filename);
             };
-            
+
             audio.onerror = function(e) {
                 console.error('Sound play error:', filename, e);
                 console.error('Audio error details:', audio.error);
             };
-            
+
             audio.play()
                 .then(() => {
                     console.log('Sound playing:', filename);
@@ -575,7 +575,7 @@
                 if (!roboflowActive) {
                     const response = await fetch('/roboflow/start', {method: 'POST'});
                     const data = await response.json();
-                    
+
                     if (data.success) {
                         roboflowActive = true;
                         button.textContent = '🛑 Stop Detection';
@@ -613,12 +613,12 @@
                     }
                     throw new Error(`HTTP ${response.status}`);
                 }
-                
+
                 const data = await response.json();
-                
+
                 // Format motor data
                 let displayText = '';
-                
+
                 if (data.sensors && Array.isArray(data.sensors)) {
                     // JSON format: {"sensors": [{"id": 1, "distance": X, "intensity": Y}, ...]}
                     // Create a map for easy lookup (swap M2 and M3)
@@ -626,7 +626,7 @@
                     data.sensors.forEach(sensor => {
                         sensorMap[sensor.id] = sensor;
                     });
-                    
+
                     // Display order: M1, M3 (as M2), M2 (as M3), M4
                     const displayOrder = [
                         { motorId: 1, sensorId: 1 },
@@ -634,7 +634,7 @@
                         { motorId: 3, sensorId: 2 },  // M3 shows sensor 2 data
                         { motorId: 4, sensorId: 4 }
                     ];
-                    
+
                     // Build HTML with red dots
                     const motors = displayOrder.map(({ motorId, sensorId }) => {
                         const sensor = sensorMap[sensorId] || { intensity: 0, distance: 0 };
@@ -653,7 +653,7 @@
                         { motorId: 3, sensorId: 2 },  // M3 shows S2 data
                         { motorId: 4, sensorId: 4 }
                     ];
-                    
+
                     // Build HTML with red dots
                     const motors = mapping.map(({ motorId, sensorId }) => {
                         const intensity = data[`S${sensorId}_int`] !== undefined ? data[`S${sensorId}_int`] : 0;
@@ -665,14 +665,14 @@
                     }).join('  ');
                     displayText = motors;
                 }
-                
+
                 // Debug: log the actual data received
                 console.log('Arduino data received:', data);
-                
+
                 arduinoData.innerHTML = displayText;
                 arduinoStatus.classList.add('visible');
                 arduinoStatus.classList.remove('error');
-                
+
             } catch (error) {
                 console.error('Arduino data error:', error);
                 arduinoStatus.classList.remove('visible');
@@ -706,7 +706,7 @@
         webcamStream.onerror = function() {
             loading.classList.remove('show');
             errorMessage.classList.add('show');
-            
+
             setTimeout(function() {
                 webcamStream.src = "{{ url_for('video_feed') }}?t=" + new Date().getTime();
             }, 2000);
@@ -724,17 +724,17 @@
         activationOverlay.addEventListener('click', function() {
             console.log('Page clicked - activating audio and voice recognition');
             enableAudio();
-            
+
             // Hide activation overlay
             activationOverlay.classList.add('hidden');
-            
+
             // Initialize speech recognition after user interaction
             initSpeechRecognition();
-            
+
             // Check status
             checkStatus();
             setInterval(checkStatus, 30000); // Check status every 30 seconds
-            
+
             // Start Arduino updates
             startArduinoUpdates();
         });

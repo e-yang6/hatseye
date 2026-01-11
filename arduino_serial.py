@@ -188,7 +188,7 @@ def arduino_read_loop():
             data = read_arduino_data()
             if data:
                 # Debug: print first successful read (comment out after debugging)
-                # print(f"Arduino data received: {data}")
+                # print(f"✓ Arduino data received: {data}")
                 pass
         except Exception as e:
             print(f"Error in arduino_read_loop: {e}")
