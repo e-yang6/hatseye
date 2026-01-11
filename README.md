@@ -19,7 +19,7 @@ Features
 --------
 
 Core Capabilities  
-- Voice Activation: Natural language wake word "hey hats eye" with flexible phonetic matching.  
+- Voice Activation: Natural language wake word "hey hatseye" with flexible phonetic matching.  
 - Real-time Webcam Streaming: Live camera feed with automatic camera detection and selection.  
 - AI Vision Analysis: Google Gemini Vision API provides intelligent object identification and scene understanding.  
 - Text-to-Speech: ElevenLabs integration delivers natural voice responses.  
