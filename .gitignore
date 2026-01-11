@@ -63,6 +63,7 @@ tmp/
 !public/
 !public/**/*.txt
 !public/**/*.md
+!public/**/*.mp3
 
 # Database files
 *.db
