@@ -640,16 +640,6 @@ def detect_wake_word(recognizer, microphone):
                     play_sound_file(wake_sound_path)
                     return True
                 
-                # MODERATE: If we have both keywords in first 2 words of a 2-3 word phrase
-                if 2 <= len(words) <= 3 and has_hat and has_eye:
-                    first_two_words = ' '.join(words[:2]).lower()
-                    if any(kw in first_two_words for kw in wake_keywords['hats']) and any(kw in first_two_words for kw in wake_keywords['eye']):
-                        print("Wake word detected!\n")
-                        # Play wake word sound if available
-                        wake_sound_path = os.path.join("public", "wake_word_sound.mp3")
-                        play_sound_file(wake_sound_path)
-                        return True
-                
             except Exception as e:
                 # Continue listening silently for speed
                 continue
