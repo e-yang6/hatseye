@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 """
 Web GUI for HATSEYE - Full functionality in browser
-Run this file to start a web server, then open http://localhost:5000 in your browser
+Run this file to start a web serv# Global state for Roboflow detection
+roboflow_detector = None
+roboflow_active = False
+roboflow_frame_counter = 0
+roboflow_last_predictions = None  # Cache last predictions to avoid flashingthen open http://localhost:5000 in your browser
 """
 
 from flask import Flask, render_template, Response, request, jsonify, send_file
@@ -27,6 +31,15 @@ from webcam_gemini import (
     _cached_available_models
 )
 from config import CAMERA_INDEX
+
+# Try to import Roboflow detector
+ROBOFLOW_AVAILABLE = False
+try:
+    from roboflow_detector import RoboflowDetector
+    ROBOFLOW_AVAILABLE = True
+    print("✓ Roboflow detector available")
+except ImportError as e:
+    print(f"⚠ Roboflow not available: {e}")
 
 app = Flask(__name__)
 
@@ -101,6 +114,11 @@ generate_favicon()
 camera = None
 camera_lock = threading.Lock()
 
+# Global variables for Roboflow detection
+roboflow_detector = None
+roboflow_active = False
+roboflow_frame_counter = 0
+
 def get_camera():
     """Get or create camera instance - uses configured camera index or auto-detects"""
     global camera
@@ -144,7 +162,8 @@ def release_camera():
         camera = None
 
 def generate_frames():
-    """Generate video frames from webcam"""
+    """Generate video frames from webcam with optional Roboflow detection"""
+    global roboflow_frame_counter, roboflow_last_predictions
     cam = get_camera()
     if cam is None:
         # Return a black frame if camera is not available
@@ -165,6 +184,38 @@ def generate_frames():
             if cam is None:
                 break
             continue
+        
+        # Apply Roboflow detection if active
+        if roboflow_active and roboflow_detector and ROBOFLOW_AVAILABLE:
+            roboflow_frame_counter += 1
+            # Process every 5 frames to reduce API calls
+            if roboflow_frame_counter % 5 == 0:
+                try:
+                    print(f"Processing frame {roboflow_frame_counter} with Roboflow...")
+                    annotated_frame, predictions = roboflow_detector.annotate_frame(frame)
+                    
+                    if predictions and 'predictions' in predictions:
+                        # Cache predictions for smooth display
+                        roboflow_last_predictions = predictions
+                        frame = annotated_frame
+                        
+                        # Log detected classes
+                        num_objects = len(predictions['predictions'])
+                        if num_objects > 0:
+                            classes = [p.get('class', 'unknown') for p in predictions['predictions']]
+                            print(f"✓ Detected {num_objects} objects: {', '.join(classes)}")
+                        else:
+                            print(f"No objects detected")
+                    else:
+                        roboflow_last_predictions = None
+                except Exception as e:
+                    print(f"Roboflow error: {e}")
+                    import traceback
+                    traceback.print_exc()
+            else:
+                # Use cached predictions for smooth display (no flashing)
+                if roboflow_last_predictions:
+                    frame = roboflow_detector.draw_predictions(frame.copy(), roboflow_last_predictions)
         
         # Encode frame as JPEG
         ret, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
@@ -294,7 +345,53 @@ def status():
     return jsonify({
         'elevenlabs_available': ELEVENLABS_AVAILABLE,
         'camera_available': get_camera() is not None,
-        'current_camera_index': CAMERA_INDEX
+        'current_camera_index': CAMERA_INDEX,
+        'roboflow_available': ROBOFLOW_AVAILABLE,
+        'roboflow_active': roboflow_active
+    })
+
+@app.route('/roboflow/start', methods=['POST'])
+def start_roboflow():
+    """Start Roboflow object detection"""
+    global roboflow_detector, roboflow_active
+    
+    if not ROBOFLOW_AVAILABLE:
+        print("ERROR: Roboflow not available")
+        return jsonify({'error': 'Roboflow not available'}), 503
+    
+    if roboflow_active:
+        print("Roboflow already running")
+        return jsonify({'message': 'Already running'}), 200
+    
+    try:
+        print("Initializing Roboflow detector...")
+        # Use your custom YOLO model (defaults to detect-count-and-visualize-7)
+        roboflow_detector = RoboflowDetector()
+        roboflow_active = True
+        print("✓ Roboflow detection ACTIVE (using your custom YOLO model)")
+        return jsonify({'success': True, 'message': 'Roboflow detection started'})
+    except Exception as e:
+        print(f"ERROR starting Roboflow: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/roboflow/stop', methods=['POST'])
+def stop_roboflow():
+    """Stop Roboflow object detection"""
+    global roboflow_detector, roboflow_active, roboflow_last_predictions
+    
+    roboflow_active = False
+    roboflow_detector = None
+    roboflow_last_predictions = None  # Clear cached predictions
+    return jsonify({'success': True, 'message': 'Roboflow detection stopped'})
+
+@app.route('/roboflow/status', methods=['GET'])
+def roboflow_status():
+    """Get Roboflow status"""
+    return jsonify({
+        'available': ROBOFLOW_AVAILABLE,
+        'active': roboflow_active
     })
 
 @app.route('/cameras', methods=['GET'])
@@ -376,7 +473,7 @@ if __name__ == '__main__':
         print("🎩 HATSEYE - Web GUI (Full Functionality)")
         print("=" * 60)
         print("\nStarting web server...")
-        print("Open your browser and go to: http://localhost:5000")
+        print("Open your browser and go to: http://localhost:8080")
         print("\nFeatures:")
         print("  - Webcam display")
         print("  - Voice recognition (browser Web Speech API)")
@@ -414,7 +511,7 @@ if __name__ == '__main__':
         
         print("\n" + "=" * 60)
         
-        app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
+        app.run(host='0.0.0.0', port=8080, debug=False, threaded=True)
     except KeyboardInterrupt:
         print("\n\n👋 Shutting down...")
         release_camera()

@@ -119,6 +119,38 @@
         .activation-title {
             display: none;
         }
+
+        /* Roboflow toggle button */
+        .roboflow-toggle {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9000;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+        }
+
+        .roboflow-toggle:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0,0,0,0.4);
+        }
+
+        .roboflow-toggle.active {
+            background: #f44336;
+        }
+
+        .roboflow-toggle.active:hover {
+            background: #da190b;
+        }
     </style>
 </head>
 <body>
@@ -129,6 +161,11 @@
     <div class="logo-container">
         <img id="logo" src="{{ url_for('static', filename='logo.png') }}" alt="HATSEYE Logo" onerror="this.style.display='none'; this.parentElement.style.display='none';">
     </div>
+
+    <!-- Roboflow toggle button -->
+    <button class="roboflow-toggle" id="roboflow-toggle" onclick="toggleRoboflow()">
+        🔍 Start Detection
+    </button>
 
     <div class="container">
         <div>
@@ -481,6 +518,40 @@
                 console.log('System status:', data);
             } catch (error) {
                 console.error('Status check error:', error);
+            }
+        }
+
+        // Toggle Roboflow detection
+        let roboflowActive = false;
+        async function toggleRoboflow() {
+            const button = document.getElementById('roboflow-toggle');
+            button.disabled = true;
+
+            try {
+                if (!roboflowActive) {
+                    const response = await fetch('/roboflow/start', {method: 'POST'});
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        roboflowActive = true;
+                        button.textContent = '🛑 Stop Detection';
+                        button.classList.add('active');
+                        console.log('Roboflow started');
+                    } else {
+                        alert('Failed: ' + (data.error || data.message));
+                    }
+                } else {
+                    const response = await fetch('/roboflow/stop', {method: 'POST'});
+                    roboflowActive = false;
+                    button.textContent = '🔍 Start Detection';
+                    button.classList.remove('active');
+                    console.log('Roboflow stopped');
+                }
+            } catch (error) {
+                console.error('Toggle error:', error);
+                alert('Error: ' + error.message);
+            } finally {
+                button.disabled = false;
             }
         }
 
