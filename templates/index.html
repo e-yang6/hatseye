@@ -33,6 +33,31 @@
             height: 100%;
         }
 
+        .logo-container {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #logo {
+            max-width: 200px;
+            max-height: 80px;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            display: block;
+        }
+
+        /* Hide logo container if logo fails to load */
+        .logo-container:has(img[style*="display: none"]) {
+            display: none;
+        }
+
         #webcam-stream {
             max-width: 100%;
             max-height: 100vh;
@@ -98,6 +123,12 @@
 <body>
     <!-- Invisible activation overlay - click anywhere to activate -->
     <div class="activation-overlay" id="activation-overlay" title="Click anywhere to activate"></div>
+    
+    <!-- Logo container - top center -->
+    <div class="logo-container">
+        <img id="logo" src="{{ url_for('static', filename='logo.png') }}" alt="HATSEYE Logo" onerror="this.style.display='none'; this.parentElement.style.display='none';">
+    </div>
+
     <div class="container">
         <div>
             <img id="webcam-stream" src="{{ url_for('video_feed') }}" alt="Webcam Stream">
@@ -126,12 +157,25 @@
         const isSafari = /Safari/.test(navigator.userAgent) && /Apple Computer/.test(navigator.vendor);
         const isFirefox = /Firefox/.test(navigator.userAgent);
 
-        // Wake word variations (very lenient matching)
+        // Wake word variations (reasonable matching)
         const wakePhrases = [
+            // Original variations
             'hey hats eye', 'hey hats i', 'hey hat eye', 'hey hat i',
             'hats eye', 'hat eye', 'hats i', 'hat i',
-            'hot sauce', 'hot saw', 'hat sauce', 'hat saw'
+            // Phonetic variations
+            'hot sauce', 'hot saw', 'hat sauce', 'hat saw',
+            'heart sauce', 'hard sauce', 'hot sighs', 'hat sighs',
+            // Partial matches with context
+            'hey hot', 'hey hat', 'hey heart', 'hey hard',
+            // Common variations
+            'hat seye', 'hats ai', 'hats aye', 'hats sauce',
+            'hot eye', 'hot i', 'heart eye', 'hard eye'
         ];
+        
+        const wakeKeywords = {
+            hats: ['hats', 'hat', 'hot', 'hut', 'hart', 'heart', 'hard'],
+            eye: ['eye', 'i', 'ai', 'aye', 'sauce', 'saws', 'saw', 'so', 'sigh', 'sighs']
+        };
 
         // Initialize Web Speech API
         function initSpeechRecognition() {
@@ -150,16 +194,48 @@
                 recognition.onresult = function(event) {
                     const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase().trim();
                     
-                    // Check for wake word
+                    // Check for wake word (EXTREMELY lenient)
                     if (!wakeWordDetected) {
+                        let detected = false;
+                        
+                        // Check for exact phrase matches first
                         for (const phrase of wakePhrases) {
                             if (transcript.includes(phrase)) {
-                                wakeWordDetected = true;
-                                console.log('Wake word detected:', transcript);
-                                // Play wake word sound immediately
-                                playSound('wake_word_sound.mp3');
+                                detected = true;
                                 break;
                             }
+                        }
+                        
+                        // If not detected, check for keyword combinations
+                        if (!detected) {
+                            const words = transcript.split(/\s+/);
+                            
+                            // Require at least 2 words
+                            if (words.length < 2) {
+                                return;
+                            }
+                            
+                            // Check for keywords in actual words (not substrings)
+                            const hasHat = words.some(word => wakeKeywords.hats.some(kw => word.toLowerCase().includes(kw)));
+                            const hasEye = words.some(word => wakeKeywords.eye.some(kw => word.toLowerCase().includes(kw)));
+                            
+                            // Require BOTH keywords in 2-3 word phrase
+                            if (words.length >= 2 && words.length <= 3 && hasHat && hasEye) {
+                                detected = true;
+                            }
+                            
+                            // Or if "hey"/"hi" + both keywords in 2-4 word phrase
+                            const hasHey = transcript.includes('hey') || transcript.includes('hi');
+                            if (!detected && hasHey && words.length <= 4 && hasHat && hasEye) {
+                                detected = true;
+                            }
+                        }
+                        
+                        if (detected) {
+                            wakeWordDetected = true;
+                            console.log('Wake word detected:', transcript);
+                            // Play wake word sound immediately
+                            playSound('wake_word_sound.mp3');
                         }
                     } else {
                         // Question received

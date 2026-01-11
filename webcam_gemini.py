@@ -15,7 +15,7 @@ import tempfile
 import os
 from PIL import Image
 from io import BytesIO
-from config import GEMINI_API_KEY, ELEVENLABS_API_KEY
+from config import GEMINI_API_KEY, ELEVENLABS_API_KEY, CAMERA_INDEX
 
 # Try to import ElevenLabs for text-to-speech
 ELEVENLABS_AVAILABLE = False
@@ -54,6 +54,23 @@ except (ImportError, OSError):
     # PyAudio not available - will use text input mode
     pass
 
+def list_available_cameras():
+    """List all available camera indices"""
+    available = []
+    # Try up to 10 camera indices
+    for i in range(10):
+        try:
+            cap = cv2.VideoCapture(i)
+            if cap.isOpened():
+                # Try to read a frame to confirm it works
+                ret, _ = cap.read()
+                if ret:
+                    available.append(i)
+                cap.release()
+        except:
+            continue
+    return available
+
 def capture_webcam_frame():
     """Capture a single frame from the default webcam"""
     # Try different approaches on Windows - DirectShow is often more reliable than MSMF
@@ -69,47 +86,58 @@ def capture_webcam_frame():
     ]
     
     cap = None
+    # Use configured camera index, or try camera indices in order if None
+    if CAMERA_INDEX is not None:
+        camera_indices = [CAMERA_INDEX]  # Use configured camera index
+    else:
+        camera_indices = [0, 1, 2]  # Auto-detect: try first 3 camera indices (0 is usually default)
+    
     for backend, backend_name in backends:
-        try:
-            cap = cv2.VideoCapture(0, backend)
-            
-            if cap.isOpened():
-                # Minimal initialization delay
-                time.sleep(0.1)
+        for camera_index in camera_indices:
+            try:
+                cap = cv2.VideoCapture(camera_index, backend)
                 
-                # Set smaller size for speed
-                cap.set(cv2.CAP_PROP_FRAME_WIDTH, 512)
-                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 512)
-                
-                # Read one frame only (skip warmup for speed)
-                ret, frame = cap.read()
-                if ret and frame is not None and frame.size > 0:
-                    # Convert BGR to RGB for PIL and resize immediately
-                    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    pil_image = Image.fromarray(frame_rgb)
+                if cap.isOpened():
+                    # Minimal initialization delay
+                    time.sleep(0.1)
                     
-                    # Resize to smaller size immediately for faster processing
-                    max_size = (512, 512)
-                    if pil_image.size[0] > max_size[0] or pil_image.size[1] > max_size[1]:
-                        pil_image.thumbnail(max_size, Image.Resampling.LANCZOS)
+                    # Set smaller size for speed
+                    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 512)
+                    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 512)
                     
-                    cap.release()
-                    return pil_image
+                    # Read one frame only (skip warmup for speed)
+                    ret, frame = cap.read()
+                    if ret and frame is not None and frame.size > 0:
+                        # Convert BGR to RGB for PIL and resize immediately
+                        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                        pil_image = Image.fromarray(frame_rgb)
+                        
+                        # Resize to smaller size immediately for faster processing
+                        max_size = (512, 512)
+                        if pil_image.size[0] > max_size[0] or pil_image.size[1] > max_size[1]:
+                            pil_image.thumbnail(max_size, Image.Resampling.LANCZOS)
+                        
+                        cap.release()
+                        return pil_image
+                    else:
+                        cap.release()
+                        cap = None
                 else:
-                    cap.release()
+                    if cap:
+                        cap.release()
                     cap = None
-            else:
+            except Exception as e:
                 if cap:
-                    cap.release()
+                    try:
+                        cap.release()
+                    except:
+                        pass
                 cap = None
-        except Exception as e:
-            if cap:
-                try:
-                    cap.release()
-                except:
-                    pass
-            cap = None
-            continue
+                continue  # Try next camera index
+        
+        # If we found a working camera with this backend, break
+        if cap and cap.isOpened():
+            break
     
     return None
 
@@ -407,7 +435,7 @@ def analyze_image_with_gemini(image, user_prompt):
                 last_error = f"Model {model_name} error"
                 break  # Try next API version
         
-        # If we got here, this model failed with all API versions
+        # If we get here, this model failed with all API versions
         # Continue to next model silently (no error returned yet)
         continue
     
@@ -538,13 +566,13 @@ def detect_wake_word(recognizer, microphone):
     if not AUDIO_AVAILABLE:
         return False
     
-    # Very lenient wake phrase variations - accept anything that sounds similar
+    # Lenient wake phrase variations - accept reasonable variations
     wake_keywords = {
         'hats': ['hats', 'hat', 'hat\'s', 'hot', 'hut', 'hart', 'heart', 'hard'],
-        'eye': ['eye', 'i', 'ai', 'aye', 'sauce', 'saws', 'sauce', 'saw', 'so', 'sigh']
+        'eye': ['eye', 'i', 'ai', 'aye', 'sauce', 'saws', 'saw', 'so', 'sigh', 'sighs']
     }
     
-    # Phonetically similar phrases - very lenient matching
+    # Phonetically similar phrases - reasonable matching
     wake_phrases = [
         # Original variations
         'hey hats eye', 'hey hats i', 'hey hat eye', 'hey hat i',
@@ -552,9 +580,9 @@ def detect_wake_word(recognizer, microphone):
         # Phonetic variations that sound similar
         'hot sauce', 'hot saw', 'hat sauce', 'hat saw',
         'heart sauce', 'hard sauce', 'hot sighs', 'hat sighs',
-        # Partial matches
+        # Partial matches with context
         'hey hot', 'hey hat', 'hey heart', 'hey hard',
-        # Very lenient - if it contains these sounds
+        # Common variations
         'hat seye', 'hats ai', 'hats aye', 'hats sauce',
         'hot eye', 'hot i', 'heart eye', 'hard eye'
     ]
@@ -584,48 +612,43 @@ def detect_wake_word(recognizer, microphone):
                         play_sound_file(wake_sound_path)
                         return True
                 
-                # VERY LENIENT matching: look for any hat/eye-like keywords anywhere
+                # LENIENT matching: look for hat/eye-like keywords in words (not substrings)
                 words = text.split()
+                text_lower = text.lower()
+                
+                # Check for keywords in actual words (not substrings) - reduces false positives
                 has_hat = any(kw in word.lower() for word in words for kw in wake_keywords['hats'])
                 has_eye = any(kw in word.lower() for word in words for kw in wake_keywords['eye'])
                 
-                # ULTRA LENIENT: If both keywords are present anywhere, accept it
-                if has_hat and has_eye:
+                # Require at least 2 words - avoid single word triggers
+                if len(words) < 2:
+                    continue
+                
+                # LENIENT: If both keywords are present in a 2-3 word phrase, accept it
+                if 2 <= len(words) <= 3 and has_hat and has_eye:
                     print("Wake word detected!\n")
                     # Play wake word sound if available
                     wake_sound_path = os.path.join("public", "wake_word_sound.mp3")
                     play_sound_file(wake_sound_path)
                     return True
                 
-                # EXTRA LENIENT: If we have either keyword in a short phrase (3 words or less)
-                if len(words) <= 3 and (has_hat or has_eye):
-                    if len(words) >= 2:
-                        first_word = words[0].lower()
-                        second_word = words[1].lower()
-                        first_is_hat = any(kw in first_word for kw in wake_keywords['hats'])
-                        second_is_eye = any(kw in second_word for kw in wake_keywords['eye'])
-                        if first_is_hat and second_is_eye:
-                            print("Wake word detected!\n")
-                            # Play wake word sound if available
-                            wake_sound_path = os.path.join("public", "wake_word_sound.mp3")
-                            play_sound_file(wake_sound_path)
-                            return True
-                
-                # VERY LENIENT: If text contains "hey" + any hat/eye keyword
-                if 'hey' in text.lower() and (has_hat or has_eye):
+                # LENIENT: If text contains "hey" or "hi" + both hat/eye keywords (2-4 words)
+                if len(words) <= 4 and ('hey' in text_lower or 'hi' in text_lower) and has_hat and has_eye:
                     print("Wake word detected!\n")
                     # Play wake word sound if available
                     wake_sound_path = os.path.join("public", "wake_word_sound.mp3")
                     play_sound_file(wake_sound_path)
                     return True
                 
-                # FINAL FALLBACK: If the phrase is 2-3 words and contains hat/eye keywords
-                if 2 <= len(words) <= 3 and (has_hat or has_eye):
-                    print("Wake word detected!\n")
-                    # Play wake word sound if available
-                    wake_sound_path = os.path.join("public", "wake_word_sound.mp3")
-                    play_sound_file(wake_sound_path)
-                    return True
+                # MODERATE: If we have both keywords in first 2 words of a 2-3 word phrase
+                if 2 <= len(words) <= 3 and has_hat and has_eye:
+                    first_two_words = ' '.join(words[:2]).lower()
+                    if any(kw in first_two_words for kw in wake_keywords['hats']) and any(kw in first_two_words for kw in wake_keywords['eye']):
+                        print("Wake word detected!\n")
+                        # Play wake word sound if available
+                        wake_sound_path = os.path.join("public", "wake_word_sound.mp3")
+                        play_sound_file(wake_sound_path)
+                        return True
                 
             except Exception as e:
                 # Continue listening silently for speed

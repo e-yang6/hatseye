@@ -22,9 +22,11 @@ from webcam_gemini import (
     is_error_message,
     play_sound_file,
     list_available_models,
+    list_available_cameras,
     ELEVENLABS_AVAILABLE,
     _cached_available_models
 )
+from config import CAMERA_INDEX
 
 app = Flask(__name__)
 
@@ -33,7 +35,7 @@ camera = None
 camera_lock = threading.Lock()
 
 def get_camera():
-    """Get or create camera instance"""
+    """Get or create camera instance - uses configured camera index or auto-detects"""
     global camera
     
     if camera is None:
@@ -43,18 +45,27 @@ def get_camera():
         except:
             CAP_DSHOW = cv2.CAP_ANY
         
+        # Use configured camera index, or try camera indices in order if None
+        if CAMERA_INDEX is not None:
+            camera_indices = [CAMERA_INDEX]  # Use configured camera index
+        else:
+            camera_indices = [0, 1, 2]  # Auto-detect: try first 3 camera indices (0 is usually default)
+        
         # Try different backends
         for backend in [CAP_DSHOW, cv2.CAP_ANY]:
-            try:
-                cam = cv2.VideoCapture(0, backend)
-                if cam.isOpened():
-                    # Set reasonable resolution
-                    cam.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-                    cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-                    camera = cam
-                    return camera
-            except:
-                continue
+            for camera_index in camera_indices:
+                try:
+                    cam = cv2.VideoCapture(camera_index, backend)
+                    if cam.isOpened():
+                        # Set reasonable resolution
+                        cam.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+                        cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+                        camera = cam
+                        return camera
+                    else:
+                        cam.release()
+                except:
+                    continue
     
     return camera
 
@@ -215,8 +226,67 @@ def status():
     """Get system status"""
     return jsonify({
         'elevenlabs_available': ELEVENLABS_AVAILABLE,
-        'camera_available': get_camera() is not None
+        'camera_available': get_camera() is not None,
+        'current_camera_index': CAMERA_INDEX
     })
+
+@app.route('/cameras', methods=['GET'])
+def list_cameras():
+    """List available camera indices"""
+    try:
+        cameras = list_available_cameras()
+        return jsonify({
+            'cameras': cameras,
+            'current_camera_index': CAMERA_INDEX
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/set_camera', methods=['POST'])
+def set_camera():
+    """Set camera index (requires restart to take effect)"""
+    try:
+        data = request.get_json()
+        camera_index = data.get('camera_index')
+        
+        # Validate camera index
+        if camera_index is not None:
+            try:
+                camera_index = int(camera_index)
+                if camera_index < 0:
+                    return jsonify({'error': 'Camera index must be non-negative'}), 400
+            except (ValueError, TypeError):
+                return jsonify({'error': 'Invalid camera index'}), 400
+        
+        # Update config file
+        config_path = os.path.join(os.path.dirname(__file__), 'config.py')
+        with open(config_path, 'r') as f:
+            config_content = f.read()
+        
+        # Replace CAMERA_INDEX line
+        import re
+        if re.search(r'^CAMERA_INDEX\s*=', config_content, re.MULTILINE):
+            # Replace existing line
+            config_content = re.sub(
+                r'^CAMERA_INDEX\s*=.*$',
+                f'CAMERA_INDEX = {camera_index}' if camera_index is not None else 'CAMERA_INDEX = None',
+                config_content,
+                flags=re.MULTILINE
+            )
+        else:
+            # Add new line
+            config_content += f'\nCAMERA_INDEX = {camera_index if camera_index is not None else "None"}\n'
+        
+        with open(config_path, 'w') as f:
+            f.write(config_content)
+        
+        return jsonify({
+            'success': True,
+            'message': f'Camera index set to {camera_index}. Please restart the server for changes to take effect.',
+            'camera_index': camera_index
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/sound/<filename>')
 def sound_file(filename):
