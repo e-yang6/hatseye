@@ -72,55 +72,55 @@ def generate_favicon():
     try:
         source_path = os.path.join('static', 'favicon_source.png')
         favicon_path = os.path.join('static', 'favicon.png')
-        
+
         # If favicon_source.png exists, process it to create favicon.png
         if os.path.exists(source_path):
             # Open the source image
             img = Image.open(source_path)
-            
+
             # Convert to RGBA if not already (preserve transparency)
             if img.mode != 'RGBA':
                 img = img.convert('RGBA')
-            
+
             # Split into channels
             r, g, b, a = img.split()
-            
+
             # Invert only RGB channels, keep alpha channel
             from PIL import ImageOps
             r_inv = ImageOps.invert(r)
             g_inv = ImageOps.invert(g)
             b_inv = ImageOps.invert(b)
-            
+
             # Merge channels back together (keep original alpha)
             inverted_img = Image.merge('RGBA', (r_inv, g_inv, b_inv, a))
-            
+
             # Resize to common favicon size (32x32 is good for modern browsers)
             favicon_size = (32, 32)
             inverted_img = inverted_img.resize(favicon_size, Image.Resampling.LANCZOS)
-            
+
             # Save as favicon
             inverted_img.save(favicon_path, 'PNG')
             print(f"Generated favicon from {source_path}")
         elif os.path.exists(favicon_path):
             # If favicon.png already exists, invert it to make it white (preserve transparency)
             img = Image.open(favicon_path)
-            
+
             # Convert to RGBA if not already (preserve transparency)
             if img.mode != 'RGBA':
                 img = img.convert('RGBA')
-            
+
             # Split into channels
             r, g, b, a = img.split()
-            
+
             # Invert only RGB channels, keep alpha channel
             from PIL import ImageOps
             r_inv = ImageOps.invert(r)
             g_inv = ImageOps.invert(g)
             b_inv = ImageOps.invert(b)
-            
+
             # Merge channels back together (keep original alpha)
             inverted_img = Image.merge('RGBA', (r_inv, g_inv, b_inv, a))
-            
+
             # Save back as favicon
             inverted_img.save(favicon_path, 'PNG')
             print(f"Inverted favicon at {favicon_path} (preserving transparency)")
@@ -145,20 +145,20 @@ roboflow_frame_counter = 0
 def get_camera():
     """Get or create camera instance - uses configured camera index or auto-detects"""
     global camera
-    
+
     if camera is None:
         # Try DirectShow backend first on Windows (more reliable)
         try:
             CAP_DSHOW = 700  # DirectShow backend constant
         except:
             CAP_DSHOW = cv2.CAP_ANY
-        
+
         # Use configured camera index, or try camera indices in order if None
         if CAMERA_INDEX is not None:
             camera_indices = [CAMERA_INDEX]  # Use configured camera index
         else:
             camera_indices = [0, 1, 2]  # Auto-detect: try first 3 camera indices (0 is usually default)
-        
+
         # Try different backends
         for backend in [CAP_DSHOW, cv2.CAP_ANY]:
             for camera_index in camera_indices:
@@ -174,7 +174,7 @@ def get_camera():
                         cam.release()
                 except:
                     continue
-    
+
     return camera
 
 def release_camera():
@@ -187,12 +187,12 @@ def release_camera():
 def check_and_play_hazard_sound(hazard_detected):
     """
     Check if a hazard has been continuously detected and play alert sound.
-    
+
     Args:
         hazard_detected (bool): True if a hazard is currently detected in the frame
     """
     global hazard_detected_time, hazard_sound_played
-    
+
     if hazard_detected:
         # Hazard is currently detected
         if hazard_detected_time is None:
@@ -202,11 +202,11 @@ def check_and_play_hazard_sound(hazard_detected):
         else:
             # Check how long the hazard has been detected
             elapsed_time = time.time() - hazard_detected_time
-            
+
             if elapsed_time >= HAZARD_THRESHOLD and not hazard_sound_played:
                 # Hazard has persisted for more than threshold - play alert sound
                 hazard_sound_file = os.path.join('public', 'Hazard.mp3')
-                
+
                 if os.path.exists(hazard_sound_file):
                     try:
                         print(f"⚠️ HAZARD ALERT: Playing hazard sound (detected for {elapsed_time:.2f}s)")
@@ -235,11 +235,11 @@ def generate_frames():
             yield (b'--frame\r\n'
                    b'Content-Type: image/jpeg\r\n\r\n' + black_frame + b'\r\n')
         return
-    
+
     while True:
         with camera_lock:
             success, frame = cam.read()
-        
+
         if not success:
             # If frame read fails, try to reinitialize camera
             release_camera()
@@ -247,7 +247,7 @@ def generate_frames():
             if cam is None:
                 break
             continue
-        
+
         # Apply Roboflow detection if active
         if roboflow_active and roboflow_detector and ROBOFLOW_AVAILABLE:
             roboflow_frame_counter += 1
@@ -256,18 +256,18 @@ def generate_frames():
                 try:
                     print(f"Processing frame {roboflow_frame_counter} with Roboflow...")
                     annotated_frame, predictions = roboflow_detector.annotate_frame(frame)
-                    
+
                     if predictions and 'predictions' in predictions:
                         # Cache predictions for smooth display
                         roboflow_last_predictions = predictions
                         frame = annotated_frame
-                        
+
                         # Log detected classes
                         num_objects = len(predictions['predictions'])
                         if num_objects > 0:
                             classes = [p.get('class', 'unknown') for p in predictions['predictions']]
                             print(f"✓ Detected {num_objects} objects: {', '.join(classes)}")
-                            
+
                             # Check for hazard detection and play sound
                             check_and_play_hazard_sound(num_objects > 0)
                         else:
@@ -288,14 +288,14 @@ def generate_frames():
                     has_predictions = roboflow_last_predictions and 'predictions' in roboflow_last_predictions
                     has_hazards = has_predictions and len(roboflow_last_predictions['predictions']) > 0
                     check_and_play_hazard_sound(has_hazards)
-        
+
         # Encode frame as JPEG
         ret, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
         if not ret:
             continue
-        
+
         frame_bytes = buffer.tobytes()
-        
+
         # Yield frame in multipart format
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
@@ -319,17 +319,17 @@ def analyze():
         image = capture_webcam_frame()
         if image is None:
             return jsonify({'error': 'Could not capture webcam frame'}), 500
-        
+
         # Get question from request
         data = request.get_json()
         question = data.get('question', 'What is in this image?')
-        
+
         # Analyze with Gemini
         result = analyze_image_with_gemini(image, question)
-        
+
         # Check if it's an error message
         is_error = is_error_message(result)
-        
+
         return jsonify({
             'result': result,
             'is_error': is_error
@@ -343,49 +343,49 @@ def tts():
     try:
         data = request.get_json()
         text = data.get('text', '')
-        
+
         print(f"TTS request received for text: {text[:50]}...")
-        
+
         if not text or is_error_message(text):
             print(f"TTS rejected: Invalid text or error message")
             return jsonify({'error': 'Invalid text for TTS'}), 400
-        
+
         if not ELEVENLABS_AVAILABLE:
             print("TTS rejected: ElevenLabs not available")
             return jsonify({'error': 'ElevenLabs not available. Please check your API key in config.py'}), 503
-        
+
         # Generate TTS audio
         from webcam_gemini import elevenlabs_client
         if elevenlabs_client is None:
             print("TTS rejected: ElevenLabs client is None")
             return jsonify({'error': 'ElevenLabs client not initialized'}), 503
-        
+
         voice_id = "EXAVITQu4vr4xnSDxMaL"  # Bella voice
         print(f"Generating TTS with voice: {voice_id}")
-        
+
         audio_generator = elevenlabs_client.text_to_speech.convert(
             voice_id=voice_id,
             text=text,
             model_id="eleven_turbo_v2_5",
             optimize_streaming_latency=4,
         )
-        
+
         # Convert generator to bytes
         print("Converting audio generator to bytes...")
         audio_bytes = b"".join(audio_generator)
         print(f"TTS audio generated: {len(audio_bytes)} bytes")
-        
+
         if len(audio_bytes) == 0:
             print("TTS Error: Generated audio is empty")
             return jsonify({'error': 'Generated audio is empty'}), 500
-        
+
         # Save to temporary file
         with tempfile.NamedTemporaryFile(delete=False, suffix='.mp3') as tmp_file:
             tmp_file.write(audio_bytes)
             tmp_path = tmp_file.name
-        
+
         print(f"TTS audio saved to: {tmp_path}")
-        
+
         # Return audio file
         # Note: Flask will handle the file, but we'll clean up after a delay
         def delayed_cleanup():
@@ -401,9 +401,9 @@ def tts():
             thread = threading.Thread(target=cleanup)
             thread.daemon = True
             thread.start()
-        
+
         delayed_cleanup()
-        
+
         return send_file(tmp_path, mimetype='audio/mpeg', as_attachment=False, download_name='response.mp3')
     except Exception as e:
         import traceback
@@ -421,29 +421,29 @@ def status():
         'roboflow_available': ROBOFLOW_AVAILABLE,
         'roboflow_active': roboflow_active
     }
-    
+
     # Add Arduino status if available
     if ARDUINO_AVAILABLE:
         status_data['arduino_available'] = True
         status_data['arduino_connected'] = arduino_is_connected()
     else:
         status_data['arduino_available'] = False
-    
+
     return jsonify(status_data)
 
 @app.route('/roboflow/start', methods=['POST'])
 def start_roboflow():
     """Start Roboflow object detection"""
     global roboflow_detector, roboflow_active
-    
+
     if not ROBOFLOW_AVAILABLE:
         print("ERROR: Roboflow not available")
         return jsonify({'error': 'Roboflow not available'}), 503
-    
+
     if roboflow_active:
         print("Roboflow already running")
         return jsonify({'message': 'Already running'}), 200
-    
+
     try:
         print("Initializing Roboflow detector...")
         # Use your custom YOLO model (defaults to detect-count-and-visualize-7)
@@ -461,7 +461,7 @@ def start_roboflow():
 def stop_roboflow():
     """Stop Roboflow object detection"""
     global roboflow_detector, roboflow_active, roboflow_last_predictions
-    
+
     roboflow_active = False
     roboflow_detector = None
     roboflow_last_predictions = None  # Clear cached predictions
@@ -480,19 +480,19 @@ def arduino_data():
     """Get latest Arduino data"""
     if not ARDUINO_AVAILABLE:
         return jsonify({'error': 'Arduino module not available'}), 503
-    
+
     if not arduino_is_connected():
         return jsonify({'error': 'Arduino not connected'}), 503
-    
+
     # Try to read fresh data first
     from arduino_serial import read_arduino_data
     read_arduino_data()  # Try to read fresh data
-    
+
     data = get_latest_data()
     if data is None:
         # No data available - return 503 instead of 404 so frontend hides the display
         return jsonify({'error': 'No data available'}), 503
-    
+
     return jsonify(data)
 
 @app.route('/arduino/send', methods=['POST'])
@@ -500,16 +500,16 @@ def arduino_send():
     """Send command to Arduino"""
     if not ARDUINO_AVAILABLE:
         return jsonify({'error': 'Arduino module not available'}), 503
-    
+
     if not arduino_is_connected():
         return jsonify({'error': 'Arduino not connected'}), 503
-    
+
     data = request.get_json()
     command = data.get('command', '')
-    
+
     if not command:
         return jsonify({'error': 'No command provided'}), 400
-    
+
     success = send_to_arduino(command)
     if success:
         return jsonify({'status': 'sent', 'command': command})
@@ -534,7 +534,7 @@ def set_camera():
     try:
         data = request.get_json()
         camera_index = data.get('camera_index')
-        
+
         # Validate camera index
         if camera_index is not None:
             try:
@@ -543,12 +543,12 @@ def set_camera():
                     return jsonify({'error': 'Camera index must be non-negative'}), 400
             except (ValueError, TypeError):
                 return jsonify({'error': 'Invalid camera index'}), 400
-        
+
         # Update config file
         config_path = os.path.join(os.path.dirname(__file__), 'config.py')
         with open(config_path, 'r') as f:
             config_content = f.read()
-        
+
         # Replace CAMERA_INDEX line
         import re
         if re.search(r'^CAMERA_INDEX\s*=', config_content, re.MULTILINE):
@@ -562,10 +562,10 @@ def set_camera():
         else:
             # Add new line
             config_content += f'\nCAMERA_INDEX = {camera_index if camera_index is not None else "None"}\n'
-        
+
         with open(config_path, 'w') as f:
             f.write(config_content)
-        
+
         return jsonify({
             'success': True,
             'message': f'Camera index set to {camera_index}. Please restart the server for changes to take effect.',
@@ -603,7 +603,7 @@ if __name__ == '__main__':
         print("  - Text-to-speech responses")
         print("\nPress Ctrl+C to stop the server")
         print("=" * 60)
-        
+
         # Test camera access
         cam = get_camera()
         if cam is None:
@@ -613,7 +613,7 @@ if __name__ == '__main__':
             # Release immediately, will reopen in generate_frames
             cam.release()
             camera = None
-        
+
         # Test Gemini API connection
         print("\nTesting Gemini API connection...")
         try:
@@ -624,13 +624,13 @@ if __name__ == '__main__':
                 print("⚠ Warning: Could not connect to Gemini API. Continuing anyway...")
         except Exception as e:
             print(f"⚠ Warning: Could not test Gemini API: {e}")
-        
+
         # Check ElevenLabs
         if ELEVENLABS_AVAILABLE:
             print("✓ ElevenLabs text-to-speech available")
         else:
             print("⚠ ElevenLabs not available - responses will be text only")
-        
+
         # Connect to Arduino if available
         if ARDUINO_AVAILABLE:
             print("\nConnecting to Arduino...")
@@ -643,9 +643,9 @@ if __name__ == '__main__':
                 print("⚠ Arduino not connected (check connection and port)")
         else:
             print("⚠ Arduino support not available (install pyserial: pip install pyserial)")
-        
+
         print("\n" + "=" * 60)
-        
+
         app.run(host='0.0.0.0', port=8080, debug=False, threaded=True)
     except KeyboardInterrupt:
         print("\n\n👋 Shutting down...")
