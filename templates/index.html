@@ -98,6 +98,45 @@
             display: block;
         }
 
+        /* Arduino motor status display - minimalistic plain text */
+        .arduino-status {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: transparent;
+            color: #333;
+            padding: 0;
+            border: none;
+            border-radius: 0;
+            font-family: monospace;
+            font-size: 14px;
+            z-index: 1000;
+            display: none;
+            white-space: nowrap;  /* Keep all items on one line */
+        }
+
+        .arduino-status.visible {
+            display: block;
+        }
+
+        .arduino-status .motor-item {
+            display: inline-block;
+            margin: 0 8px;
+            position: relative;
+            white-space: nowrap;  /* Keep motor info on one line */
+        }
+
+        /* Red dot indicator for each motor */
+        .motor-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 6px;
+            vertical-align: middle;
+        }
+
         /* Invisible activation overlay - activates on any click */
         .activation-overlay {
             position: fixed;
@@ -175,6 +214,11 @@
             </div>
             <div class="loading" id="loading">Loading webcam...</div>
         </div>
+    </div>
+
+    <!-- Arduino Motor Status Display -->
+    <div class="arduino-status" id="arduino-status">
+        <span id="arduino-data">Arduino: Connecting...</span>
     </div>
 
 
@@ -555,6 +599,103 @@
             }
         }
 
+        // Arduino motor data display
+        const arduinoStatus = document.getElementById('arduino-status');
+        const arduinoData = document.getElementById('arduino-data');
+
+        async function updateArduinoData() {
+            try {
+                const response = await fetch('/arduino/data');
+                if (!response.ok) {
+                    if (response.status === 503) {
+                        arduinoStatus.classList.remove('visible');
+                        return; // Arduino not connected, hide display
+                    }
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                // Format motor data
+                let displayText = '';
+                
+                if (data.sensors && Array.isArray(data.sensors)) {
+                    // JSON format: {"sensors": [{"id": 1, "distance": X, "intensity": Y}, ...]}
+                    // Create a map for easy lookup (swap M2 and M3)
+                    const sensorMap = {};
+                    data.sensors.forEach(sensor => {
+                        sensorMap[sensor.id] = sensor;
+                    });
+                    
+                    // Display order: M1, M3 (as M2), M2 (as M3), M4
+                    const displayOrder = [
+                        { motorId: 1, sensorId: 1 },
+                        { motorId: 2, sensorId: 3 },  // M2 shows sensor 3 data
+                        { motorId: 3, sensorId: 2 },  // M3 shows sensor 2 data
+                        { motorId: 4, sensorId: 4 }
+                    ];
+                    
+                    // Build HTML with red dots
+                    const motors = displayOrder.map(({ motorId, sensorId }) => {
+                        const sensor = sensorMap[sensorId] || { intensity: 0, distance: 0 };
+                        const intensity = sensor.intensity || 0;
+                        // Calculate opacity based on intensity (0-170 maps to 0.2-1.0)
+                        const opacity = Math.max(0.2, Math.min(1.0, 0.2 + (intensity / 170) * 0.8));
+                        const redValue = Math.round(255 * opacity);
+                        return `<span class="motor-item"><span class="motor-dot" style="background-color: rgb(${redValue}, 0, 0);"></span>M${motorId}: ${String(intensity).padStart(3)} (${String(sensor.distance).padStart(3)}cm)</span>`;
+                    }).join('  ');
+                    displayText = motors;
+                } else {
+                    // Simple format: S1_int: 123, S1_dist: 45, etc. (swap M2 and M3)
+                    const mapping = [
+                        { motorId: 1, sensorId: 1 },
+                        { motorId: 2, sensorId: 3 },  // M2 shows S3 data
+                        { motorId: 3, sensorId: 2 },  // M3 shows S2 data
+                        { motorId: 4, sensorId: 4 }
+                    ];
+                    
+                    // Build HTML with red dots
+                    const motors = mapping.map(({ motorId, sensorId }) => {
+                        const intensity = data[`S${sensorId}_int`] !== undefined ? data[`S${sensorId}_int`] : 0;
+                        const distance = data[`S${sensorId}_dist`] !== undefined ? data[`S${sensorId}_dist`] : 0;
+                        // Calculate opacity based on intensity (0-170 maps to 0.2-1.0)
+                        const opacity = Math.max(0.2, Math.min(1.0, 0.2 + (intensity / 170) * 0.8));
+                        const redValue = Math.round(255 * opacity);
+                        return `<span class="motor-item"><span class="motor-dot" style="background-color: rgb(${redValue}, 0, 0);"></span>M${motorId}: ${String(intensity).padStart(3)} (${String(distance).padStart(3)}cm)</span>`;
+                    }).join('  ');
+                    displayText = motors;
+                }
+                
+                // Debug: log the actual data received
+                console.log('Arduino data received:', data);
+                
+                arduinoData.innerHTML = displayText;
+                arduinoStatus.classList.add('visible');
+                arduinoStatus.classList.remove('error');
+                
+            } catch (error) {
+                console.error('Arduino data error:', error);
+                arduinoStatus.classList.remove('visible');
+            }
+        }
+
+        // Update Arduino data every 100ms
+        let arduinoUpdateInterval = null;
+        function startArduinoUpdates() {
+            if (arduinoUpdateInterval) return;
+            updateArduinoData(); // Initial update
+            arduinoUpdateInterval = setInterval(updateArduinoData, 100);
+        }
+
+        function stopArduinoUpdates() {
+            if (arduinoUpdateInterval) {
+                clearInterval(arduinoUpdateInterval);
+                arduinoUpdateInterval = null;
+            }
+            arduinoStatus.classList.remove('visible');
+        }
+
+
         // Handle image load
         webcamStream.onload = function() {
             loading.classList.remove('show');
@@ -593,6 +734,9 @@
             // Check status
             checkStatus();
             setInterval(checkStatus, 30000); // Check status every 30 seconds
+            
+            // Start Arduino updates
+            startArduinoUpdates();
         });
 
         // Initialize on page load (but don't start recognition until activation)
