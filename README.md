@@ -1,126 +1,131 @@
-# HATSEYE - Voice-Centered Vision Analyzer
+# HATSEYE
+AI-powered vision assistant for visually impaired users  
+Voice-activated object recognition with real-time camera analysis  
 
-A voice-activated vision analyzer that uses wake word "hey hats eye" to activate, then listens for your question. Captures a webcam frame and analyzes it using Google's Gemini Vision API to identify objects you're holding and extract visible text.
+---
+Overview
+--------
 
-## Features
+Ever struggle with identifying objects in your daily life? Need a hands-free way to know what you're looking at?
 
-- **Voice-activated**: Wake word "hey hats eye" to activate
-- **Speech-to-text**: Speak your questions naturally
-- **Visual indicators**: Shows when listening and processing
-- **Conversational responses**: AI responds naturally as if speaking to you
-- **Single frame capture**: Captures webcam frame only when activated
-- **Object detection**: Identifies what you're holding
-- **Text reading**: Extracts visible text from images
+Traditional vision assistance apps require constant interaction and aren't optimized for quick, single-sentence responses.  
+That's why we built HATSEYE: a voice-activated vision analyzer that uses natural language wake words and AI-powered image analysis to help visually impaired users understand their surroundings.
 
-## Installation
+HATSEYE combines voice recognition, real-time webcam streaming, Google Gemini Vision API, and Arduino sensor integration to provide instant, conversational assistance. Simply say "hey hats eye" to activate, ask your question naturally, and receive a clear, one-sentence answer about what you're seeing.
 
-### Quick Start (Using Virtual Environment)
+---
 
-A virtual environment is already set up with Python 3.8 and PyAudio installed.
+Features
+--------
 
-**To activate the virtual environment:**
-- **Windows PowerShell/CMD:** Run `.\activate_venv.bat` or manually:
-  ```bash
-  .\venv\Scripts\activate
-  ```
+Core Capabilities  
+- Voice Activation: Natural language wake word "hey hats eye" with flexible phonetic matching.  
+- Real-time Webcam Streaming: Live camera feed with automatic camera detection and selection.  
+- AI Vision Analysis: Google Gemini Vision API provides intelligent object identification and scene understanding.  
+- Text-to-Speech: ElevenLabs integration delivers natural voice responses.  
+- Single-Sentence Responses: Optimized prompts for clear, concise answers tailored for visually impaired users.  
+- Arduino Integration: Real-time motor and sensor data display for haptic feedback systems.  
+- Web GUI: Full-featured browser interface with minimalist design and webcam display.  
 
-**To run the application:**
-```bash
-python webcam_gemini.py
-```
+Technical Features  
+- Wake Word Detection: Web Speech API with phonetic matching and keyword combination logic.  
+- Image Capture: OpenCV-based frame capture with multi-camera support and auto-detection.  
+- Audio Playback: Background sound effects for wake word detection and question received confirmation.  
+- Serial Communication: PySerial integration for Arduino motor control and ultrasonic sensor data.  
+- State Management: Independent API calls ensure no conversation history between requests.  
+- Responsive Design: Clean, minimalist interface focused on webcam display and essential information.  
+- Favicon Generation: Automatic color inversion with transparency preservation from source images.  
 
-### Manual Installation (If needed)
+---
 
-If you want to set up from scratch:
+Architecture
+------------
 
-1. Create a virtual environment with Python 3.8 (PyAudio works best with 3.8-3.13):
-   ```bash
-   py -3.8 -m venv venv
-   .\venv\Scripts\activate
-   ```
+HATSEYE connects multiple systems into a unified vision assistance pipeline:
 
-2. Install the required dependencies:
-   ```bash
-   pip install -r requirements.txt
-   pip install pyaudio
-   ```
+User Voice Input → Web Speech API → Wake Word Detection → Question Transcription → Webcam Frame Capture → Google Gemini Vision API → Text-to-Speech → Audio Response  
+Camera Feed → OpenCV Processing → Frame Encoding → Base64 Encoding → Gemini API → Single-Sentence Analysis → ElevenLabs TTS  
+Arduino Serial → PySerial Communication → Sensor Data Parsing → Motor Status Display → Real-time UI Updates  
 
-### Installing PyAudio (Required for Voice Features)
+---
 
-**Python Version Compatibility:**
-PyAudio officially supports Python **2.7 through 3.13**. Python 3.14 is very new and doesn't have official PyAudio wheels yet.
+Tech Stack
+-----------
 
-**Windows (Python 3.14):**
-If you're using Python 3.14, you have a few options:
+| Category | Technologies |
+|-----------|---------------|
+| Frontend | HTML5, CSS3, JavaScript (ES6), Web Speech API |
+| Backend | Python 3.8+, Flask 2.3+, OpenCV (cv2) |
+| AI & ML | Google Gemini Vision API, ElevenLabs Text-to-Speech |
+| Hardware | Arduino (Ultrasonic Sensors, PWM Motors), PySerial |
+| Image Processing | Pillow (PIL), NumPy |
+| Audio | Pygame (backend), Web Audio API (frontend) |
+| Web Framework | Flask with Jinja2 templating |
 
-**Option 1: Download and install a pre-built wheel manually**
-1. Go to: https://www.lfd.uci.edu/~gohlke/pythonlibs/#pyaudio
-2. Download the wheel file matching your Python version and architecture (e.g., `PyAudio-0.2.11-cp314-cp314-win_amd64.whl`)
-3. Install it: `pip install PyAudio-0.2.11-cp314-cp314-win_amd64.whl`
+---
 
-**Option 2: Use Python 3.13 (Recommended)**
-Install Python 3.13 and use it for this project. PyAudio has official wheels for Python 3.13.
+How It Works
+------------
 
-**Option 3: Use text input mode (no voice features)**
-If PyAudio is not installed, the app will automatically fall back to text input mode where you can type your questions instead of speaking them. This works with any Python version and provides all vision features without voice.
+1. Wake Word Activation – User says "hey hats eye" (or phonetic variations), Web Speech API detects wake word with flexible matching.  
+2. Question Capture – System listens for user's question about the visual scene, plays confirmation sound effect.  
+3. Frame Capture – OpenCV captures current webcam frame from selected camera source with automatic camera detection.  
+4. AI Analysis – Base64-encoded image sent to Google Gemini Vision API with optimized prompt for visually impaired assistance.  
+5. Response Generation – Gemini provides single-sentence answer, sent to ElevenLabs for natural voice synthesis.  
+6. Audio Playback – Text-to-speech audio played through browser, with visual indicators for system status.  
+7. Arduino Integration – Real-time sensor data displayed showing motor intensity and distance measurements for haptic feedback.  
 
-**Linux:**
-```bash
-sudo apt-get install portaudio19-dev python3-pyaudio
-```
+---
 
-**macOS:**
-```bash
-brew install portaudio
-pip install pyaudio
-```
+Data Sources
+------------
 
-**Note**: If PyAudio is not installed, the app will automatically work in text input mode.
+- Web Speech API for real-time voice recognition and transcription
+- OpenCV camera feed for live image capture
+- Google Gemini Vision API for AI-powered image analysis and object identification
+- ElevenLabs API for natural text-to-speech synthesis
+- Arduino Serial Protocol for ultrasonic sensor and motor control data
+- CSV configuration files for API keys and camera settings
 
-## Usage
+---
 
-Run the application:
-```bash
-python webcam_gemini.py
-```
+Challenges Overcome
+-------------------
 
-### Voice Commands:
+- Integrated Web Speech API with flexible phonetic wake word matching for natural activation.  
+- Built stateless Gemini API integration ensuring independent requests with no conversation history.  
+- Implemented browser autoplay policy workarounds with user activation overlay for audio playback.  
+- Created seamless Arduino serial communication with JSON parsing and auto-detection fallbacks.  
+- Optimized master prompt for single-sentence responses tailored to visually impaired users.  
+- Developed real-time webcam streaming with Flask and OpenCV frame encoding for low latency.  
+- Integrated multiple audio systems (Pygame backend, Web Audio API frontend) with error handling.  
 
-1. Say **"hey hats eye"** to wake up the assistant
-2. Wait for the listening indicator (👂)
-3. Speak your question (e.g., "what am I holding?" or "read the text")
-4. The assistant will capture a webcam frame, analyze it, and respond conversationally
+---
 
-Press `Ctrl+C` to exit the application.
+Future Roadmap
+--------------
 
-## Example Flow
+- Mobile App: Native iOS and Android applications with improved wake word detection.  
+- Offline Mode: On-device AI processing for privacy and reduced latency.  
+- Advanced Wake Word: Custom wake word training for personalized activation.  
+- Multi-language Support: Translation and TTS in multiple languages.  
+- Haptic Feedback: Enhanced Arduino motor patterns for different object types and distances.  
+- Database Integration: Store question history and response patterns for improved assistance.  
+- Wearable Integration: Support for smart glasses and wearable camera systems.  
+- Custom Prompts: User-configurable master prompts for specialized use cases.  
 
-```
-🔇 Waiting for wake word "hey hats eye"...
-✨ Wake word detected!
+---
 
-👂 Listening for your question...
-🎤 Listening... ✓
-   Transcribing... ✓
-   You said: "what am I holding?"
+Team
+----
 
-📸 Capturing webcam frame...
-🤖 Analyzing with AI...
+| Member |
+|---------|
+| (Add team member names here) |
 
-💬 Response:
-────────────────────────────────────────────
-You're holding a coffee mug.
-────────────────────────────────────────────
-```
+---
 
-## Requirements
+Links
+-----
 
-- Python 3.7+
-- Webcam access
-- Microphone access
-- Google Gemini API key (configured in `config.py`)
-- Internet connection (for speech recognition and Gemini API)
-
-## Configuration
-
-The Gemini API key is stored in `config.py`. Make sure your API key has access to vision-capable models.
+- (Add project links here)
