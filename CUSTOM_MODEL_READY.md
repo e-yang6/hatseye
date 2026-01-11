@@ -3,6 +3,7 @@
 ## Your Custom Model is Now Active! 🎉
 
 ### Model Details
+
 - **Model ID**: `road-damage-lh70u-dk94k/1`
 - **Type**: Custom YOLO model trained for road damage detection
 - **Status**: ✅ Working and integrated into the web app
@@ -10,12 +11,12 @@
 
 ## What's Working
 
-✅ **Roboflow Inference SDK** installed and configured  
-✅ **Custom model** `road-damage-lh70u-dk94k/1` is the default  
-✅ **Web app integration** complete  
-✅ **Toggle button** to start/stop detection  
-✅ **Real-time detection** every 5 frames  
-✅ **Bounding boxes and labels** will appear on detected road damage  
+✅ **Roboflow Inference SDK** installed and configured
+✅ **Custom model** `road-damage-lh70u-dk94k/1` is the default
+✅ **Web app integration** complete
+✅ **Toggle button** to start/stop detection
+✅ **Real-time detection** every 5 frames
+✅ **Bounding boxes and labels** will appear on detected road damage
 
 ## How to Use
 
@@ -28,6 +29,7 @@
 ## Testing
 
 Your model was successfully tested:
+
 ```bash
 cd /Users/ryan/Desktop/Hatseye2/hatseye
 source .venv-roboflow/bin/activate
@@ -39,6 +41,7 @@ Result: ✅ Model responded successfully (0 objects detected in webcam - expecte
 ## What Will Be Detected
 
 Your model will detect the classes you trained it on, such as:
+
 - Potholes
 - Cracks
 - Road damage types
@@ -47,6 +50,7 @@ Your model will detect the classes you trained it on, such as:
 ## For Best Results
 
 To see detections:
+
 1. Point the camera at **actual road damage** or
 2. Show the camera **images/video of roads with damage** on another screen
 3. Make sure there's good lighting
@@ -62,6 +66,7 @@ To see detections:
 ## Next Steps
 
 Your custom computer vision is **ready to use**! Just:
+
 1. Open http://localhost:8080
 2. Click "Start Detection"
 3. Point the camera at road damage
@@ -69,7 +74,7 @@ Your custom computer vision is **ready to use**! Just:
 
 ---
 
-**Model**: `road-damage-lh70u-dk94k/1`  
-**Status**: 🟢 ACTIVE  
-**Server**: http://localhost:8080  
+**Model**: `road-damage-lh70u-dk94k/1`
+**Status**: 🟢 ACTIVE
+**Server**: http://localhost:8080
 **Ready**: YES ✅

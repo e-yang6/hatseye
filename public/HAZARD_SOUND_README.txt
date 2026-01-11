@@ -3,7 +3,7 @@ HAZARD SOUND SETUP
 
 The hazard detection feature requires a sound file named 'Hazard.mp3' in this directory.
 
-When a hazard is detected by Roboflow for more than 0.25 seconds, the system will 
+When a hazard is detected by Roboflow for more than 0.25 seconds, the system will
 automatically play this sound to alert the user.
 
 To set up:

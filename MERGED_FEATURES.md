@@ -5,6 +5,7 @@
 This branch (`roboflow-integration`) now combines two major features:
 
 ### 1. 🔍 Roboflow Road Damage Detection
+
 - Custom YOLO model: `road-damage-lh70u-dk94k/1`
 - Real-time object detection in webcam feed
 - Smooth bounding box display (no flickering)
@@ -12,6 +13,7 @@ This branch (`roboflow-integration`) now combines two major features:
 - Terminal logging for detected classes
 
 ### 2. 🤖 Arduino Connection
+
 - Serial communication with Arduino
 - Real-time motor intensity and distance display
 - 4 motors (M1, M2, M3, M4) with sensor data
@@ -21,6 +23,7 @@ This branch (`roboflow-integration`) now combines two major features:
 ## 🎯 Combined Features
 
 Both features work simultaneously:
+
 - **Roboflow detection**: Displays bounding boxes on road damage in the video feed
 - **Arduino display**: Shows motor sensor data in the top-left corner
 - **Voice interaction**: Gemini AI analysis with wake word detection
@@ -29,6 +32,7 @@ Both features work simultaneously:
 ## 🚀 How to Use
 
 ### Start the Server
+
 ```bash
 cd /Users/ryan/Desktop/Hatseye2/hatseye
 source .venv-roboflow/bin/activate
@@ -36,9 +40,11 @@ python3 web_gui.py
 ```
 
 ### Open Browser
+
 Navigate to: http://localhost:8080
 
 ### Features in Web UI
+
 1. **Webcam Feed**: Live camera with overlay
 2. **Roboflow Toggle**: Click "🔍 Start Detection" to enable road damage detection
 3. **Arduino Display**: Shows motor data (if Arduino is connected)
@@ -48,16 +54,19 @@ Navigate to: http://localhost:8080
 ## 📁 New Files Added
 
 ### Arduino Files
+
 - `arduino_integrated.ino` - Arduino sketch for sensors/motors
 - `arduino_serial.py` - Python serial communication module
 - `monitor_motors.py` - Motor monitoring utility
 
 ### Roboflow Files
+
 - `roboflow_detector.py` - Roboflow Inference SDK integration
 - `roboflow_http.py` - Original HTTP API (deprecated)
 - `test_roboflow.py` - Test script for detection
 
 ### Documentation
+
 - `ROBOFLOW_FIXED.md` - Roboflow setup guide
 - `CUSTOM_MODEL_READY.md` - Custom model documentation
 - `SMOOTH_DETECTION_FIXED.md` - Flickering fix details
@@ -66,6 +75,7 @@ Navigate to: http://localhost:8080
 ## 🔧 Configuration
 
 Edit `config.py` (local only, not tracked):
+
 ```python
 # Gemini API Key
 GEMINI_API_KEY = "your-key-here"
@@ -84,6 +94,7 @@ ARDUINO_BAUDRATE = 9600
 ## 📊 System Status
 
 Server startup shows:
+
 ```
 ✓ Roboflow detector available
 ✓ Webcam initialized successfully
@@ -95,15 +106,18 @@ Server startup shows:
 ## 🎨 Web UI Features
 
 ### Top-Left Corner
+
 - Arduino motor data display (when connected)
 - Format: `M1: 123 (45cm)  M2: 89 (32cm)  M3: 156 (18cm)  M4: 34 (67cm)`
 - Red dots indicate intensity (brighter = stronger)
 
 ### Center-Bottom
+
 - Roboflow toggle button
 - "🔍 Start Detection" / "🛑 Stop Detection"
 
 ### Bottom Panel
+
 - Voice activation button
 - Question input field
 - Response display area
@@ -115,6 +129,7 @@ Server startup shows:
 - **Merge commit**: `3b368c4`
 
 To merge into main later:
+
 ```bash
 git checkout main
 git merge roboflow-integration
@@ -122,14 +137,14 @@ git merge roboflow-integration
 
 ## ✨ What's Working
 
-✅ Roboflow road damage detection  
-✅ Arduino motor data display  
-✅ Gemini AI image analysis  
-✅ Voice wake word detection  
-✅ Text-to-speech responses  
-✅ Smooth bounding boxes (no flickering)  
-✅ Real-time motor sensor updates  
-✅ Combined UI with both features  
+✅ Roboflow road damage detection
+✅ Arduino motor data display
+✅ Gemini AI image analysis
+✅ Voice wake word detection
+✅ Text-to-speech responses
+✅ Smooth bounding boxes (no flickering)
+✅ Real-time motor sensor updates
+✅ Combined UI with both features
 
 ## 🎉 Success!
 
