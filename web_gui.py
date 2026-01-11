@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Web GUI for Hat's Eye - Full functionality in browser
+Web GUI for HATSEYE - Full functionality in browser
 Run this file to start a web server, then open http://localhost:5000 in your browser
 """
 
@@ -14,7 +14,7 @@ import os
 from PIL import Image
 from io import BytesIO
 
-# Import Hat's Eye functionality
+# Import HATSEYE functionality
 from webcam_gemini import (
     analyze_image_with_gemini,
     capture_webcam_frame,
@@ -236,7 +236,7 @@ def sound_file(filename):
 if __name__ == '__main__':
     try:
         print("=" * 60)
-        print("🎩 Hat's Eye - Web GUI (Full Functionality)")
+        print("🎩 HATSEYE - Web GUI (Full Functionality)")
         print("=" * 60)
         print("\nStarting web server...")
         print("Open your browser and go to: http://localhost:5000")

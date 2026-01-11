@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Hat's Eye - Voice-Centered Vision Analyzer
+HATSEYE - Voice-Centered Vision Analyzer
 Uses wake word "hey hats eye" to activate, then listens for questions
 Captures webcam frame and analyzes using Gemini API
 """
@@ -654,7 +654,7 @@ def main():
     # Check if audio is available
     if not AUDIO_AVAILABLE:
         print("=" * 60)
-        print("🎩 Hat's Eye - Vision Analyzer")
+        print("🎩 HATSEYE - Vision Analyzer")
         print("=" * 60)
         print("\n⚠️  Voice features are not available (PyAudio not installed)")
         print("\nTo enable voice features on Windows:")
@@ -701,7 +701,7 @@ def main():
     
     # Use cached model list from startup (don't call API again)
     print("=" * 60)
-    print("🎩 Hat's Eye - Voice Vision Analyzer")
+    print("🎩 HATSEYE - Voice Vision Analyzer")
     print("=" * 60)
     print("\nChecking available models...")
     if _cached_available_models:

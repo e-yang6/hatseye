@@ -1,4 +1,4 @@
-# Hat's Eye - Voice-Centered Vision Analyzer
+# HATSEYE - Voice-Centered Vision Analyzer
 
 A voice-activated vision analyzer that uses wake word "hey hats eye" to activate, then listens for your question. Captures a webcam frame and analyzes it using Google's Gemini Vision API to identify objects you're holding and extract visible text.
 

@@ -1,4 +1,4 @@
-Sound Files for Hat's Eye
+Sound Files for HATSEYE
 
 Place your MP3 sound files in this folder:
 

@@ -1,5 +1,5 @@
 @echo off
-REM Activate the virtual environment for Hat's Eye
+REM Activate the virtual environment for HATSEYE
 call venv\Scripts\activate.bat
 echo Virtual environment activated!
 echo Python version:
