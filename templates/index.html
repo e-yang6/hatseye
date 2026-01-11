@@ -165,30 +165,31 @@
             bottom: 20px;
             right: 20px;
             z-index: 9000;
-            background: #4CAF50;
-            color: white;
-            border: none;
-            padding: 15px 25px;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
+            background: transparent;
+            color: #333;
+            border: 1px solid #ccc;
+            padding: 8px 16px;
+            border-radius: 2px;
+            font-size: 12px;
+            font-weight: normal;
+            font-family: 'Courier New', monospace;
             cursor: pointer;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-            transition: all 0.3s ease;
+            transition: border-color 0.2s ease, color 0.2s ease;
         }
 
         .roboflow-toggle:hover {
-            background: #45a049;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 8px rgba(0,0,0,0.4);
+            border-color: #999;
+            color: #000;
         }
 
         .roboflow-toggle.active {
-            background: #f44336;
+            border-color: #999;
+            color: #000;
         }
 
         .roboflow-toggle.active:hover {
-            background: #da190b;
+            border-color: #666;
+            color: #000;
         }
     </style>
 </head>
@@ -203,7 +204,7 @@
 
     <!-- Roboflow toggle button -->
     <button class="roboflow-toggle" id="roboflow-toggle" onclick="toggleRoboflow()">
-        🔍 Start Detection
+        Start Detection
     </button>
 
     <div class="container">
@@ -578,7 +579,7 @@
 
                     if (data.success) {
                         roboflowActive = true;
-                        button.textContent = '🛑 Stop Detection';
+                        button.textContent = 'Stop Detection';
                         button.classList.add('active');
                         console.log('Roboflow started');
                     } else {
@@ -587,7 +588,7 @@
                 } else {
                     const response = await fetch('/roboflow/stop', {method: 'POST'});
                     roboflowActive = false;
-                    button.textContent = '🔍 Start Detection';
+                    button.textContent = 'Start Detection';
                     button.classList.remove('active');
                     console.log('Roboflow stopped');
                 }
