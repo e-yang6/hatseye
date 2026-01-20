@@ -11,7 +11,7 @@ Ever struggle with identifying objects in your daily life? Need a hands-free way
 Traditional vision assistance apps require constant interaction and aren't optimized for quick, single-sentence responses.  
 That's why we built HATSEYE: a voice-activated vision analyzer that uses natural language wake words and AI-powered image analysis to help visually impaired users understand their surroundings.
 
-HATSEYE combines voice recognition, real-time webcam streaming, Google Gemini Vision API, and Arduino sensor integration to provide instant, conversational assistance. Simply say "hey hats eye" to activate, ask your question naturally, and receive a clear, one-sentence answer about what you're seeing.
+HATSEYE combines voice recognition, real-time webcam streaming, Google Gemini Vision API, and Arduino sensor integration to provide instant, conversational assistance. Simply say "hey hatseye" to activate, ask your question naturally, and receive a clear, one-sentence answer about what you're seeing.
 
 ---
 
@@ -67,7 +67,7 @@ Tech Stack
 How It Works
 ------------
 
-1. Wake Word Activation – User says "hey hats eye" (or phonetic variations), Web Speech API detects wake word with flexible matching.  
+1. Wake Word Activation – User says "hey hatseye" (or phonetic variations), Web Speech API detects wake word with flexible matching.  
 2. Question Capture – System listens for user's question about the visual scene, plays confirmation sound effect.  
 3. Frame Capture – OpenCV captures current webcam frame from selected camera source with automatic camera detection.  
 4. AI Analysis – Base64-encoded image sent to Google Gemini Vision API with optimized prompt for visually impaired assistance.  
