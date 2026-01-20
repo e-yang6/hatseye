@@ -74,8 +74,10 @@ Ultrasonic Sensors → Arduino → Serial Data → Backend Processing → Rumble
 
 ## Team
 
-- Ryan Gao  
-- Ethan Yang  
+| Member |
+|--------|
+| Ryan Gao |
+| Ethan Yang |
 
 ---
 
