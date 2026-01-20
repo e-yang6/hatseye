@@ -129,4 +129,4 @@ Team
 Links
 -----
 
-- (Add project links here)
+- Devpost submission: https://devpost.com/software/hatseye
